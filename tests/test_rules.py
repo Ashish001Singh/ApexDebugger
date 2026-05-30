@@ -74,9 +74,23 @@ def test_dml_outside_loop_clean():
 
 # ── hardcoded_id ─────────────────────────────────────────────────────────────
 
-HARDCODED_ID = """\
+HARDCODED_SF_ID = """\
 public class Bad {
     private static final Id RT_ID = '012000000000AAAAAQ';
+}"""
+
+HARDCODED_ID_VIA_CONTEXT = """\
+public class Bad {
+    public void run() {
+        acc.OwnerId = 'XXXXXXXXXXXXXXXXX1';
+    }
+}"""
+
+HARDCODED_EXTERNAL_ID_FIELD = """\
+public class Bad {
+    public void run() {
+        account.ExternalCustomerId__c = 'SAP-CUST-2024-001';
+    }
 }"""
 
 NO_HARDCODED_ID = """\
@@ -85,10 +99,20 @@ public class Good {
 }"""
 
 
-def test_hardcoded_id_detects():
-    findings = check_hardcoded_id(HARDCODED_ID)
-    assert len(findings) >= 1
+def test_hardcoded_sf_id_detects():
+    findings = check_hardcoded_id(HARDCODED_SF_ID)
     assert any(f.rule == "hardcoded_id" for f in findings)
+    assert findings[0].severity.value == "high"
+
+
+def test_hardcoded_id_via_context_detects():
+    findings = check_hardcoded_id(HARDCODED_ID_VIA_CONTEXT)
+    assert any(f.rule == "hardcoded_id" for f in findings)
+
+
+def test_hardcoded_external_id_field_detects():
+    findings = check_hardcoded_id(HARDCODED_EXTERNAL_ID_FIELD)
+    assert any(f.rule == "hardcoded_external_id" for f in findings)
 
 
 def test_no_hardcoded_id_clean():
@@ -106,12 +130,26 @@ public class Bad {
     }
 }"""
 
-HAS_CRUD = """\
+HAS_CRUD_LEGACY = """\
 public with sharing class Good {
     public void run() {
         if (Schema.sObjectType.Account.isAccessible()) {
             List<Account> accs = [SELECT Id FROM Account];
         }
+    }
+}"""
+
+HAS_USER_MODE = """\
+public with user mode class Best {
+    public void run() {
+        List<Account> accs = [SELECT Id FROM Account];
+    }
+}"""
+
+WITH_SYSTEM_MODE = """\
+public with system mode class SystemClass {
+    public void run() {
+        List<Account> accs = [SELECT Id FROM Account];
     }
 }"""
 
@@ -122,7 +160,20 @@ def test_missing_crud_detects():
     assert "missing_crud_fls" in rules
 
 
-def test_has_crud_no_finding():
-    findings = check_missing_crud_fls(HAS_CRUD)
+def test_legacy_with_sharing_and_crud_check_no_finding():
+    findings = check_missing_crud_fls(HAS_CRUD_LEGACY)
     rules = [f.rule for f in findings]
     assert "missing_crud_fls" not in rules
+
+
+def test_user_mode_suppresses_crud_finding():
+    findings = check_missing_crud_fls(HAS_USER_MODE)
+    rules = [f.rule for f in findings]
+    assert "missing_crud_fls" not in rules
+    assert "missing_sharing_declaration" not in rules
+
+
+def test_system_mode_flags_info():
+    findings = check_missing_crud_fls(WITH_SYSTEM_MODE)
+    rules = [f.rule for f in findings]
+    assert "explicit_system_mode" in rules
