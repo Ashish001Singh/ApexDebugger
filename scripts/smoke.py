@@ -19,7 +19,7 @@ if __name__ == "__main__":
     print(f"File: {result.filename}")
     print(f"Findings: {len(result.findings)}\n")
     for f in result.findings:
-        print(f"  [{f.severity.value.upper()}] L{f.line} {f.rule}: {f.message}")
+        print(f"  [{f.severity.value.upper()}] L{f.line} {f.rule.value}: {f.message}")
     if not result.findings:
         print("No findings — smoke test may be broken.")
         raise SystemExit(1)
