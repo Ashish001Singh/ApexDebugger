@@ -19,7 +19,8 @@ In Apex class you check for:
 6. If the code written adheres to the best practices of salesforce or not
 7. if there is something which can result in heap size or out of bound or null pointer exception or any kind of exception you should flag that as well
 
-But you should also take care of the findings which is already feed into you you should never check those again
+Make sure to check the line clearly and don't deflect from the actual line because we are merging all the findings together so
+it is very important that line should be considered clearly.
 """
 from src.apex_copilot.reasoning.models import Finding, ReviewResult, LLMReviewOutput
 from typing_extensions import TypedDict
@@ -61,14 +62,26 @@ def run_reasoning_graph(code: str, findings: list[Finding], filename: str) -> Re
 
     return ReviewResult(
         filename=filename,
-        findings=findings,
+        findings=final_state["findings"],
         summary=final_state["summary"],
         llm_explanation=final_state["llm_explanation"],
     )
 
+def merge_findings(regex: list[Finding], llm: list[Finding]) ->list[Finding]:
+  seen = {(f.rule.value,f.line) for f in regex}
+
+  extra_findings = list(regex)
+  for f in llm:
+    if(f.rule.value,f.line) in seen:
+      continue
+    else:
+      extra_findings.append(f)
+
+  return extra_findings
 
 def retrieve_context(state: ApexReviewState) ->dict:
   return {"context_chunks": []}
+
 
 
 def reason(state: ApexReviewState) -> dict:
@@ -80,6 +93,8 @@ Code:
 
 Explain why each matters and rate overall risk."""
 
+
+
   response = client.chat.completions.parse(
         model=settings.openai_model,
         max_tokens=1024,
@@ -90,10 +105,11 @@ Explain why each matters and rate overall risk."""
         response_format=LLMReviewOutput,
     )
   output = response.choices[0].message.parsed
-
+  merged_findings= merge_findings(state["findings"] ,output.findings)
   return{
+        "findings": merged_findings, 
         "summary":output.summary,
-        "llm_explanation": "\n".join(f" - [line {f.line}] {f.rule.value}: {f.message}"  for f in output.findings)
+        "llm_explanation": "\n".join(f" - [line {f.line}] {f.rule.value}: {f.message}"  for f in merged_findings)
   }
 
 
@@ -105,3 +121,4 @@ builder.add_edge("retrieve_context","reason")
 builder.add_edge("reason",END)
 
 graph = builder.compile()
+
