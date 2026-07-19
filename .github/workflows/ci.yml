@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-and-gate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      # Tests are pure functions and never call the API; a dummy key just lets the
+      # OpenAI client construct at import. TODO(phase2b): lazy-init the client instead.
+      OPENAI_API_KEY: sk-ci-dummy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run unit tests (exclude integration/LLM tests)
+        run: uv run python -m pytest -q -m "not integration"
+
+      - name: Deterministic eval gate (regex rules, free)
+        run: uv run python eval/runner.py

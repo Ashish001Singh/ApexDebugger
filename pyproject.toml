@@ -42,6 +42,7 @@ packages = ["src/apex_copilot", "cli"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = ["integration: tests that call the real LLM (need OPENAI_API_KEY, cost money)"]
 
 [tool.ruff]
 line-length = 100
