@@ -12,3 +12,5 @@
 {"id": "dml_in_loop_002", "description": "DML keyword inside while loop", "code": "public with sharing class OrderProcessor {\n    public void updateOrders(List<Order__c> orders) {\n        Integer i = 0;\n        while (i < orders.size()) {\n            orders[i].Status__c = 'Processed';\n            update orders[i] as SYSTEM;\n            i++;\n        }\n    }\n}", "expected_rules": ["dml_in_loop","explicit_system_mode"]}
 
 {"id": "dml_in_loop_003", "description": "DML keyword inside while loop", "code": "public with sharing class OrderProcessor {\n    public void updateOrders(List<Order__c> orders) {\n        Integer i = 0;\n        while (i < orders.size()) {\n            orders[i].Status__c = 'Processed';\n            update orders[i] as USER;\n            i++;\n        }\n    }\n}", "expected_rules": ["dml_in_loop"]}
+
+{"id": "exception_risk_001", "description": "Unhandled DML — DmlException risk", "code": "public with sharing class AccountService {\n    public void createAccount(Account a) {\n        if (Schema.sObjectType.Account.isCreateable()) {\n            insert a as USER;\n        }\n    }\n}", "expected_rules": ["exception_risk"]}
