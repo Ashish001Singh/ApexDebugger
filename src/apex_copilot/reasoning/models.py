@@ -23,6 +23,8 @@ class RuleId(str,Enum):
   best_practice_violation="best_practice_violation"
   other="other"
   explicit_system_mode = "explicit_system_mode"
+  nested_loop_2 = "nested_loop_2"       # 2 levels — MEDIUM, review
+  nested_loop_deep = "nested_loop_deep"       # 3+ levels — HIGH, CPU/heap risk
 
 
 class Finding(BaseModel):

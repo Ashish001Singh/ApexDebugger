@@ -5,6 +5,7 @@ from .soql_in_loop import check_soql_in_loop
 from .dml_in_loop import check_dml_in_loop
 from .hardcoded_id import check_hardcoded_id
 from .missing_crud_fls import check_missing_crud_fls
+from .nested_loop import check_nested_loop
 
 RuleFunc = Callable[[str], list[Finding]]
 
@@ -13,6 +14,7 @@ RULES: list[RuleFunc] = [
     check_dml_in_loop,
     check_hardcoded_id,
     check_missing_crud_fls,
+    check_nested_loop,
 ]
 
 

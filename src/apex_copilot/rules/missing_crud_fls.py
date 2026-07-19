@@ -22,7 +22,17 @@ _CRUD_CHECK = re.compile(
 # with user mode = full enforcement (CRUD+FLS+sharing). with sharing = sharing only.
 _USER_MODE = re.compile(r"\bwith\s+user\s+mode\b", re.IGNORECASE)
 _WITH_SHARING = re.compile(r"\bwith\s+sharing\b", re.IGNORECASE)
-_SYSTEM_MODE = re.compile(r"\bwith\s+system\s+mode\b", re.IGNORECASE)
+# System mode (class-level OR inline query/DML) explicitly bypasses all security.
+_SYSTEM_MODE = re.compile(
+    r"\bwith\s+system\s+mode\b|WITH\s+SYSTEM_MODE|AccessLevel\.SYSTEM_MODE|\bas\s+system\b",
+    re.IGNORECASE,
+)
+# Inline statement-level enforcement (API v56+). These enforce CRUD/FLS on the query/DML itself.
+# WITH USER_MODE / AccessLevel.USER_MODE / `as user` also enforce sharing; WITH SECURITY_ENFORCED does NOT.
+_INLINE_CRUD_ENFORCED = re.compile(
+    r"WITH\s+USER_MODE|WITH\s+SECURITY_ENFORCED|AccessLevel\.USER_MODE|\bas\s+user\b",
+    re.IGNORECASE,
+)
 
 
 def check_missing_crud_fls(code: str) -> list[Finding]:
@@ -31,15 +41,16 @@ def check_missing_crud_fls(code: str) -> list[Finding]:
     #   don't suppress findings in another method that has no check.
 
     has_dml_or_soql = bool(_DML_OPS.search(code))
-    has_crud_check = bool(_CRUD_CHECK.search(code))
+    has_crud_check = bool(_CRUD_CHECK.search(code)) or bool(_INLINE_CRUD_ENFORCED.search(code))
     has_user_mode = bool(_USER_MODE.search(code))
     has_with_sharing = bool(_WITH_SHARING.search(code))
     has_system_mode = bool(_SYSTEM_MODE.search(code))
 
     findings: list[Finding] = []
 
-    # with user mode enforces CRUD+FLS automatically — no manual checks needed
-    if has_dml_or_soql and not has_user_mode and not has_crud_check:
+    # with user mode / inline enforcement handle CRUD+FLS. system mode is a deliberate
+    # bypass — surfaced separately as explicit_system_mode (INFO), not flagged as negligence.
+    if has_dml_or_soql and not has_user_mode and not has_crud_check and not has_system_mode:
         findings.append(
             Finding(
                 rule="missing_crud_fls",
