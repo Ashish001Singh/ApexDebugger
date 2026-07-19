@@ -39,7 +39,7 @@ def apex_review(file: str, json_output: bool, min_severity: str) -> None:
     for finding in filtered:
         color = {"high": "red", "medium": "yellow", "low": "cyan"}.get(finding.severity.value, "white")
         click.secho(
-            f"  [{finding.severity.value.upper()}] Line {finding.line} — {finding.rule}",
+            f"  [{finding.severity.value.upper()}] Line {finding.line} — {finding.rule.value}",
             fg=color,
             bold=True,
         )

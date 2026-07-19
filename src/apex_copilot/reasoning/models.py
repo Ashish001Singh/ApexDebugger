@@ -8,9 +8,27 @@ class Severity(str, Enum):
     LOW = "low"
     INFO = "info"
 
+class RuleId(str,Enum):
+  soql_in_loop="soql_in_loop"
+  dml_in_loop="dml_in_loop"
+  hardcoded_id="hardcoded_id"
+  hardcoded_external_id="hardcoded_external_id"
+  missing_crud_fls="missing_crud_fls"
+  missing_sharing_declaration="missing_sharing_declaration"
+  high_complexity="high_complexity"
+  duplicate_method="duplicate_method"
+  unbatched_db_calls="unbatched_db_calls"
+  missing_static_constant="missing_static_constant"
+  exception_risk="exception_risk"
+  best_practice_violation="best_practice_violation"
+  other="other"
+  explicit_system_mode = "explicit_system_mode"
+  nested_loop_2 = "nested_loop_2"       # 2 levels — MEDIUM, review
+  nested_loop_deep = "nested_loop_deep"       # 3+ levels — HIGH, CPU/heap risk
+
 
 class Finding(BaseModel):
-    rule: str
+    rule: RuleId
     severity: Severity
     line: int
     message: str
@@ -23,3 +41,9 @@ class ReviewResult(BaseModel):
     findings: list[Finding]
     summary: str | None = None  # Phase 2: LLM-generated summary
     llm_explanation: str | None = None  # Phase 2: Claude reasoning output
+
+
+class LLMReviewOutput(BaseModel):
+  findings: list[Finding]
+  summary: str
+
