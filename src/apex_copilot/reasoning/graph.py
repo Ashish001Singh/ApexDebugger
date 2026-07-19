@@ -119,18 +119,35 @@ def vote_findings(runs: list[list[Finding]], threshold: int) -> list[Finding]:
 
     return [representative[rule] for rule, votes in rule_votes.items() if votes >= threshold]
 
-def retrieve_context(state: ApexReviewState) ->dict:
+from pathlib import Path
+
+# Small-corpus RAG: the whole best-practices doc is loaded and stuffed into the
+# prompt (no embeddings / vector DB until the corpus outgrows the context window).
+_KB_PATH = Path(__file__).parent.parent / "kb" / "best_practices.md"
+
+
+def retrieve_context(state: ApexReviewState) -> dict:
+  if _KB_PATH.exists():
+      return {"context_chunks": [_KB_PATH.read_text()]}
   return {"context_chunks": []}
 
 
 
 def reason(state: ApexReviewState) -> dict:
+  grounding = ""
+  if state["context_chunks"]:
+      joined = "\n\n".join(state["context_chunks"])
+      grounding = (
+          "\n\nReference — Salesforce best practices. Ground your findings in these; "
+          "do not contradict them:\n" + joined + "\n"
+      )
+
   user_message = f"""Review this Apex code.
 
 Filename: {state['filename']}
 Code:
 {state['code']}
-
+{grounding}
 Explain why each matters and rate overall risk."""
 
 
