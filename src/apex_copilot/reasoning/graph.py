@@ -127,9 +127,14 @@ _KB_PATH = Path(__file__).parent.parent / "kb" / "best_practices.md"
 
 
 def retrieve_context(state: ApexReviewState) -> dict:
+  chunks = []
   if _KB_PATH.exists():
-      return {"context_chunks": [_KB_PATH.read_text()]}
-  return {"context_chunks": []}
+      chunks.append(_KB_PATH.read_text())
+  # Optional project-specific best practices supplied by the user.
+  user_path = settings.user_best_practices_path
+  if user_path and Path(user_path).exists():
+      chunks.append(Path(user_path).read_text())
+  return {"context_chunks": chunks}
 
 
 

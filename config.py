@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     environment: str = "development"
 
+    # Optional path to a project-specific best-practices .md the user supplies.
+    # Grounding = built-in best_practices.md + this file (if set and exists).
+    user_best_practices_path: str = ""
+
     # LLM model used for reasoning (Phase 2+)
     claude_model: str = "claude-haiku-4-5-20251001"
     openai_model: str = "gpt-4o-mini"
