@@ -139,17 +139,19 @@ public with sharing class Good {
     }
 }"""
 
+# Inline WITH USER_MODE enforces CRUD/FLS; class-level 'with sharing' covers sharing.
 HAS_USER_MODE = """\
-public with user mode class Best {
+public with sharing class Best {
     public void run() {
-        List<Account> accs = [SELECT Id FROM Account];
+        List<Account> accs = [SELECT Id FROM Account WITH USER_MODE];
     }
 }"""
 
+# Inline WITH SYSTEM_MODE = deliberate bypass → explicit_system_mode (INFO).
 WITH_SYSTEM_MODE = """\
-public with system mode class SystemClass {
+public with sharing class SystemClass {
     public void run() {
-        List<Account> accs = [SELECT Id FROM Account];
+        List<Account> accs = [SELECT Id FROM Account WITH SYSTEM_MODE];
     }
 }"""
 

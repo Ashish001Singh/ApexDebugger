@@ -19,12 +19,13 @@ _CRUD_CHECK = re.compile(
     r"\.(isAccessible|isCreateable|isUpdateable|isDeletable|isReadable)\s*\(\)",
     re.IGNORECASE,
 )
-# with user mode = full enforcement (CRUD+FLS+sharing). with sharing = sharing only.
-_USER_MODE = re.compile(r"\bwith\s+user\s+mode\b", re.IGNORECASE)
-_WITH_SHARING = re.compile(r"\bwith\s+sharing\b", re.IGNORECASE)
-# System mode (class-level OR inline query/DML) explicitly bypasses all security.
+# Class-level sharing declaration — the ONLY construct that satisfies the class
+# sharing requirement. `with sharing` / `without sharing` / `inherited sharing`.
+# USER_MODE / SYSTEM_MODE are operational (query/DML) modes, NOT class declarations.
+_CLASS_SHARING = re.compile(r"\b(with|without|inherited)\s+sharing\b", re.IGNORECASE)
+# System mode (inline query/DML) explicitly bypasses security — operational only.
 _SYSTEM_MODE = re.compile(
-    r"\bwith\s+system\s+mode\b|WITH\s+SYSTEM_MODE|AccessLevel\.SYSTEM_MODE|\bas\s+system\b",
+    r"WITH\s+SYSTEM_MODE|AccessLevel\.SYSTEM_MODE|\bas\s+system\b",
     re.IGNORECASE,
 )
 # Inline statement-level enforcement (API v56+). These enforce CRUD/FLS on the query/DML itself.
@@ -42,15 +43,14 @@ def check_missing_crud_fls(code: str) -> list[Finding]:
 
     has_dml_or_soql = bool(_DML_OPS.search(code))
     has_crud_check = bool(_CRUD_CHECK.search(code)) or bool(_INLINE_CRUD_ENFORCED.search(code))
-    has_user_mode = bool(_USER_MODE.search(code))
-    has_with_sharing = bool(_WITH_SHARING.search(code))
+    has_class_sharing = bool(_CLASS_SHARING.search(code))
     has_system_mode = bool(_SYSTEM_MODE.search(code))
 
     findings: list[Finding] = []
 
-    # with user mode / inline enforcement handle CRUD+FLS. system mode is a deliberate
-    # bypass — surfaced separately as explicit_system_mode (INFO), not flagged as negligence.
-    if has_dml_or_soql and not has_user_mode and not has_crud_check and not has_system_mode:
+    # Inline enforcement (WITH USER_MODE / SECURITY_ENFORCED / as user) handles CRUD+FLS.
+    # System mode is a deliberate bypass — surfaced as explicit_system_mode, not negligence.
+    if has_dml_or_soql and not has_crud_check and not has_system_mode:
         findings.append(
             Finding(
                 rule="missing_crud_fls",
@@ -58,25 +58,25 @@ def check_missing_crud_fls(code: str) -> list[Finding]:
                 line=1,
                 message="DML or SOQL found with no CRUD/FLS enforcement.",
                 suggestion=(
-                    "Preferred (API v56+): declare class 'with user mode' — enforces sharing, "
-                    "CRUD, and FLS automatically. "
-                    "Legacy: add Schema.sObjectType.MyObject__c.isAccessible() before queries "
+                    "Enforce at the operation: WITH USER_MODE (SOQL) or `as user` (DML), "
+                    "or add Schema.sObjectType.MyObject__c.isAccessible() before queries "
                     "and isCreateable()/isUpdateable() before DML."
                 ),
             )
         )
 
-    # Flag if no access-control keyword at all
-    if has_dml_or_soql and not has_user_mode and not has_with_sharing and not has_system_mode:
+    # No class-level sharing keyword → runs as inherited sharing. Not a bug, but best
+    # practice is to declare intent explicitly. INFO, not a hard finding.
+    if has_dml_or_soql and not has_class_sharing:
         findings.append(
             Finding(
                 rule="missing_sharing_declaration",
-                severity=Severity.MEDIUM,
+                severity=Severity.INFO,
                 line=1,
-                message="Class performs DML/SOQL but has no sharing/access-mode declaration.",
+                message="No explicit class sharing declaration — runs as inherited sharing.",
                 suggestion=(
-                    "Add 'with user mode' (API v56+, enforces sharing + CRUD + FLS) "
-                    "or 'with sharing' (enforces sharing only) to the class declaration."
+                    "Good practice: declare 'with sharing', 'without sharing', or "
+                    "'inherited sharing' on the class to make the sharing intent explicit."
                 ),
             )
         )
@@ -87,7 +87,7 @@ def check_missing_crud_fls(code: str) -> list[Finding]:
                 rule="explicit_system_mode",
                 severity=Severity.INFO,
                 line=1,
-                message="Class uses 'with system mode' — bypasses all sharing, CRUD, and FLS.",
+                message="Operation uses system mode — bypasses sharing, CRUD, and FLS.",
                 suggestion="Confirm this is intentional. Document why system-level access is required.",
             )
         )

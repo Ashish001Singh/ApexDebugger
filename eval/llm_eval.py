@@ -3,7 +3,7 @@ from pathlib import Path
 from src.apex_copilot.review import review
 
 GOLDEN = Path(__file__).parent / "golden_set.jsonl"
-N_RUNS = 5          # how many times to run each case (measure the wobble)
+N_RUNS = 2          # eval repeats per case; voting (3x) already inside each review()
 GATE_F1 = 0.7          # mean F1 must clear this
 
 def score(expected: set[str], found: set[str]) -> dict:

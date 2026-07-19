@@ -21,14 +21,34 @@ In Apex class you check for:
 
 Make sure to check the line clearly and don't deflect from the actual line because we are merging all the findings together so
 it is very important that line should be considered clearly.
+
+Do NOT report missing CRUD/FLS if an isAccessible/isCreateable check exists.
+Do NOT report a loop that isn't present. Do NOT report missing sharing if
+'with sharing' is declared. Only report what you can point to a specific line for.
 """
 from src.apex_copilot.reasoning.models import Finding, ReviewResult, LLMReviewOutput
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
 from config import settings
 from openai import OpenAI
+from collections import Counter
+from src.apex_copilot.reasoning.models import RuleId  # if not already imported
+
+# Rules the deterministic layer owns — regex is authoritative. The LLM's job is
+# only the reasoning rules regex CAN'T do; drop its claims on regex-owned rules.
+REGEX_OWNED = {
+    RuleId.soql_in_loop, RuleId.dml_in_loop, RuleId.hardcoded_id,
+    RuleId.hardcoded_external_id, RuleId.missing_crud_fls,
+    RuleId.missing_sharing_declaration, RuleId.explicit_system_mode,
+    RuleId.nested_loop_2, RuleId.nested_loop_deep,
+}
 
 client = OpenAI(api_key=settings.openai_api_key)
+
+# Consensus voting: run the LLM VOTE_RUNS times, keep findings appearing in
+# >= VOTE_THRESHOLD runs. 3/2 is the cheapest meaningful majority.
+VOTE_RUNS = 3
+VOTE_THRESHOLD = 2
 
 
 class ApexReviewState(TypedDict):
@@ -72,12 +92,32 @@ def merge_findings(regex: list[Finding], llm: list[Finding]) ->list[Finding]:
 
   extra_findings = list(regex)
   for f in llm:
+    if f.rule in REGEX_OWNED:
+      continue
     if(f.rule.value,f.line) in seen:
       continue
-    else:
-      extra_findings.append(f)
+    extra_findings.append(f)
 
   return extra_findings
+
+def vote_findings(runs: list[list[Finding]], threshold: int) -> list[Finding]:
+    """
+    runs = N independent LLM finding-lists. Keep one representative Finding per
+    RULE that appears in >= threshold of the runs. Kills random hallucinations.
+    """
+    rule_votes = Counter()          # how many runs contain each rule
+    representative = {}             # first Finding object seen per rule
+
+    for run in runs:
+        seen_this_run = set()
+        for f in run:
+            if f.rule not in representative:
+                representative[f.rule] = f      # keep a real Finding to return
+            seen_this_run.add(f.rule)           # dedupe within the run
+        for rule in seen_this_run:
+            rule_votes[rule] += 1               # one vote per run per rule
+
+    return [representative[rule] for rule, votes in rule_votes.items() if votes >= threshold]
 
 def retrieve_context(state: ApexReviewState) ->dict:
   return {"context_chunks": []}
@@ -95,20 +135,28 @@ Explain why each matters and rate overall risk."""
 
 
 
-  response = client.chat.completions.parse(
-        model=settings.openai_model,
-        max_tokens=1024,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_message},
-        ],
-        response_format=LLMReviewOutput,
-    )
-  output = response.choices[0].message.parsed
-  merged_findings= merge_findings(state["findings"] ,output.findings)
+  runs = []
+  summary = None
+  for _ in range(VOTE_RUNS):
+      response = client.chat.completions.parse(
+          model=settings.openai_model,
+          max_tokens=1024,
+          messages=[
+              {"role": "system", "content": SYSTEM_PROMPT},
+              {"role": "user", "content": user_message},
+          ],
+          response_format=LLMReviewOutput,
+      )
+      output = response.choices[0].message.parsed
+      runs.append(output.findings)
+      if summary is None:
+          summary = output.summary
+
+  voted = vote_findings(runs, VOTE_THRESHOLD)
+  merged_findings = merge_findings(state["findings"], voted)
   return{
-        "findings": merged_findings, 
-        "summary":output.summary,
+        "findings": merged_findings,
+        "summary": summary,
         "llm_explanation": "\n".join(f" - [line {f.line}] {f.rule.value}: {f.message}"  for f in merged_findings)
   }
 
