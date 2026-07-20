@@ -1,6 +1,8 @@
 from src.apex_copilot.review import review
 from src.apex_copilot.reasoning.models import ReviewResult
+import pytest 
 
+pytestmark = pytest.mark.integration
 
 def test_review_returns_result():
     code = "public class Empty {}"

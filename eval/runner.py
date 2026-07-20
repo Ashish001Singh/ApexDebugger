@@ -6,10 +6,19 @@ Usage:
 
 Phase 1 gate: precision >= 0.8 AND recall >= 0.8 across all cases.
 """
+
+"""
+  Two evals, two jobs, two functions they call:
+    runner.py    → run_all_rules  → "are my regex rules correct?"   (free, deterministic)
+    llm_eval.py  → review         → "is the whole product good?"    (paid, probabilistic)
+"""
 import json
 from pathlib import Path
-from src.apex_copilot.review import review
+from src.apex_copilot.rules import run_all_rules
 
+REGEX_RULES = {"soql_in_loop","dml_in_loop","hardcoded_id","hardcoded_external_id",
+               "missing_crud_fls","missing_sharing_declaration","explicit_system_mode",
+               "nested_loop_2","nested_loop_deep"}
 
 GOLDEN_SET = Path(__file__).parent / "golden_set.jsonl"
 GATE_PRECISION = 0.8
@@ -30,10 +39,12 @@ def run_eval() -> None:
 
     total_precision, total_recall = 0.0, 0.0
     print(f"\nRunning eval on {len(cases)} golden cases\n{'='*50}")
-
+    graded = 0
     for case in cases:
-        result = review(case["code"], filename=case["id"])
-        found_rules = [f.rule for f in result.findings]
+        if not set(case["expected_rules"]) <= REGEX_RULES:
+            continue
+        graded += 1
+        found_rules = [f.rule.value for f in run_all_rules(case["code"])]# regex only
         precision, recall = score_case(case["expected_rules"], found_rules)
         total_precision += precision
         total_recall += recall
@@ -44,8 +55,8 @@ def run_eval() -> None:
         print(f"  Found:    {found_rules}")
         print(f"  Precision: {precision:.2f}  Recall: {recall:.2f}\n")
 
-    avg_p = total_precision / len(cases)
-    avg_r = total_recall / len(cases)
+    avg_p = total_precision / graded if graded else 0.0
+    avg_r = total_recall / graded if graded else 0.0
     overall = "PASS" if avg_p >= GATE_PRECISION and avg_r >= GATE_RECALL else "FAIL"
     print(f"{'='*50}")
     print(f"OVERALL [{overall}]  Avg Precision: {avg_p:.2f}  Avg Recall: {avg_r:.2f}")
