@@ -136,6 +136,18 @@ authoritative — drop the LLM's claim (Fix B / `REGEX_OWNED`). The LLM keeps on
 can't do.
 **Principle:** For rules the deterministic layer owns, deterministic wins; the LLM adds value only where regex can't reach.
 
+**Q: KNOWN LIMITATION — if regex has a *coverage gap* (a real `soql_in_loop` in a syntax the
+regex doesn't parse) and the LLM catches it, Fix B drops it. Isn't that a lost finding?**
+Why: Yes — a genuine miss disappears. It's the accepted cost of regex authority. Note first:
+regex scans the whole file, so it never catches one instance of a pattern and misses another
+of the *same* syntax — the gap only exists for syntax *variants* the rule doesn't cover. We
+can't safely keep "new-location" LLM findings to patch this, because line drift plus the LLM's
+tendency to hallucinate regex-owned rules make a real regex-gap catch indistinguishable from
+an invented one. So the safety net *moves*: instead of "LLM rescues at runtime" (unreliable),
+it becomes "eval surfaces the gap → you extend the regex" (reliable, permanent) — exactly how
+`as user` / `as system` / `WITH SYSTEM_MODE` coverage was added.
+**Principle:** Don't patch a deterministic hole with a probabilistic layer — it lets non-determinism back in. Close the gap in the deterministic rule; let the eval find the gaps.
+
 ---
 
 ## 8. Grounding / RAG
