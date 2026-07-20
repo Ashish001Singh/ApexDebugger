@@ -1,0 +1,45 @@
+name: ApexDebugger PR Review
+
+# Advisory review (NOT a merge gate): runs the LLM review on changed Apex files
+# and posts findings as a PR comment. Costs API calls — needs OPENAI_API_KEY secret.
+
+on:
+  pull_request:
+    paths:
+      - "**.cls"
+      - "**.trigger"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.12
+      - run: uv sync
+
+      - name: Collect changed Apex files
+        id: changed
+        run: |
+          FILES=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" -- '*.cls' '*.trigger' | tr '\n' ' ')
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+
+      - name: Run ApexDebugger review
+        if: steps.changed.outputs.files != ''
+        run: uv run python scripts/review_pr.py ${{ steps.changed.outputs.files }} > review.md
+
+      - name: Post review comment
+        if: steps.changed.outputs.files != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr comment "${{ github.event.pull_request.number }}" --body-file review.md
