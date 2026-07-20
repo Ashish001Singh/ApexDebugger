@@ -202,4 +202,24 @@ run, executed manually. Same as mock-callout vs live-callout tests in a deploy p
 
 ---
 
+## 11. Multi-agent orchestration (planned: + LWC reviewer)
+
+**Q: To add an LWC reviewer alongside Apex, what's the right architecture?**
+Why: The orchestrator-workers pattern — a **router** inspects the changed files and routes by
+type (`.cls` → Apex agent, `.js/.html` → LWC agent); the specialist agents run independently
+(can be parallel); a **synthesizer** consolidates their findings into one report. It's an
+evolution, not a rewrite: `review()` becomes the orchestrator, the current Apex pipeline
+becomes one worker, `merge_findings` grows into the synthesizer. Each agent keeps its own
+rules + LLM prompt + golden eval set (the moat scales per language). Sequence: finish Apex
+first, then add LWC — don't restructure for a feature not yet built (YAGNI).
+**Principle:** Grow single-purpose pipelines into multi-agent systems by promoting existing pieces (entry → router, pipeline → worker, merge → synthesizer), not rewriting.
+
+**Q: Is the synthesizer code or an LLM?**
+Why: Depends on the job. *Consolidating + deduping* findings is objective → code (same as
+`merge_findings`). *Cross-language contract* reasoning — e.g. "this LWC `@wire`s an Apex method
+that has no CRUD check" — needs judgment neither single-language agent has → LLM. Start with
+code-consolidation; the cross-cutting LLM synthesizer is the high-value v2 (finds boundary
+bugs no single-file linter can).
+**Principle:** Same rule as everywhere — objective consolidation → code; cross-context reasoning → LLM.
+
 <!-- Append new entries below as we go. Keep it concept + why, skip transient debugging. -->
