@@ -93,3 +93,35 @@ def test_imperative_call_without_catch_detects():
 def test_imperative_call_with_catch_clean():
     findings = check_imperative_apex_no_error_handling(IMPERATIVE_WITH_CATCH, "")
     assert findings == []
+
+
+from src.lwc_copilot.rules.missing_wire_error_handler import check_missing_wire_error_handler
+
+WIRE_NO_ERROR_HANDLER = """\
+export default class Bad extends LightningElement {
+    @wire(getContacts)
+    contacts;
+}"""
+
+WIRE_WITH_ERROR_HANDLER = """\
+export default class Good extends LightningElement {
+    @wire(getContacts)
+    wiredContacts({ data, error }) {
+        if (data) {
+            this.contacts = data;
+        } else if (error) {
+            this.error = error;
+        }
+    }
+}"""
+
+
+def test_wire_bare_property_detects():
+    findings = check_missing_wire_error_handler(WIRE_NO_ERROR_HANDLER, "")
+    assert len(findings) == 1
+    assert findings[0].rule == "missing_wire_error_handler"
+
+
+def test_wire_with_error_destructure_clean():
+    findings = check_missing_wire_error_handler(WIRE_WITH_ERROR_HANDLER, "")
+    assert findings == []
