@@ -1,8 +1,11 @@
 from typing import Callable
 from src.review_core.models import Finding
+from .unsafe_inner_html import check_unsafe_inner_html
 
 RuleFunc = Callable[[str, str], list[Finding]]
-RULES: list[RuleFunc] = []
+RULES: list[RuleFunc] = [
+    check_unsafe_inner_html,
+]
 
 def run_all_rules(js_code: str, html_code: str) -> list[Finding]:
     findings: list[Finding] = []
