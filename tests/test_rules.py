@@ -3,7 +3,7 @@ from src.apex_copilot.rules.soql_in_loop import check_soql_in_loop
 from src.apex_copilot.rules.dml_in_loop import check_dml_in_loop
 from src.apex_copilot.rules.hardcoded_id import check_hardcoded_id
 from src.apex_copilot.rules.missing_crud_fls import check_missing_crud_fls
-from src.apex_copilot.reasoning.models import Severity
+from src.review_core.models import Severity
 
 
 # ── soql_in_loop ─────────────────────────────────────────────────────────────

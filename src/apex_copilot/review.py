@@ -1,6 +1,6 @@
 from src.apex_copilot.rules import run_all_rules
 from src.apex_copilot.reasoning.graph import run_reasoning_graph
-from src.apex_copilot.reasoning.models import ReviewResult
+from src.review_core.models import ReviewResult
 
 
 def review(code: str, filename: str = "anonymous.cls") -> ReviewResult:

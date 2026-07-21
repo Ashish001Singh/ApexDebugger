@@ -26,13 +26,13 @@ Do NOT report missing CRUD/FLS if an isAccessible/isCreateable check exists.
 Do NOT report a loop that isn't present. Do NOT report missing sharing if
 'with sharing' is declared. Only report what you can point to a specific line for.
 """
-from src.apex_copilot.reasoning.models import Finding, ReviewResult, LLMReviewOutput
+from src.review_core.models import Finding, ReviewResult, LLMReviewOutput
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
 from config import settings
 from openai import OpenAI
 from collections import Counter
-from src.apex_copilot.reasoning.models import RuleId  # if not already imported
+from src.review_core.models import RuleId  # if not already imported
 
 # Rules the deterministic layer owns — regex is authoritative. The LLM's job is
 # only the reasoning rules regex CAN'T do; drop its claims on regex-owned rules.

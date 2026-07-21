@@ -1,5 +1,5 @@
 import re
-from src.apex_copilot.reasoning.models import Finding, Severity
+from src.review_core.models import Finding, Severity
 from .patterns import LOOP_OPEN
 
 # Detects DML statements (insert/update/delete/upsert/merge/undelete) inside loops.

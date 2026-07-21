@@ -2,7 +2,7 @@ import sys
 import json
 import click
 from src.apex_copilot.review import review
-from src.apex_copilot.reasoning.models import Severity
+from src.review_core.models import Severity
 
 
 @click.group()

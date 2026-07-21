@@ -2,7 +2,7 @@
 # NOTE: line-based — assumes one loop-open per line (standard Apex formatting).
 # Multiple loops on a single line are undercounted. Same limitation as soql_in_loop.
 
-from src.apex_copilot.reasoning.models import Finding, Severity,RuleId
+from src.review_core.models import Finding, Severity,RuleId
 import re
 from .patterns import LOOP_OPEN
 

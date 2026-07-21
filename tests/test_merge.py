@@ -1,6 +1,6 @@
-from src.apex_copilot.reasoning.models import Finding
+from src.review_core.models import Finding
 from src.apex_copilot.reasoning.graph import merge_findings
-from src.apex_copilot.reasoning.models import Severity
+from src.review_core.models import Severity
 
 
 

@@ -25,6 +25,11 @@ class RuleId(str,Enum):
   explicit_system_mode = "explicit_system_mode"
   nested_loop_2 = "nested_loop_2"       # 2 levels — MEDIUM, review
   nested_loop_deep = "nested_loop_deep"       # 3+ levels — HIGH, CPU/heap risk
+  unsafe_inner_html="unsafe_inner_html"
+  manual_dom_manipulation="manual_dom_manipulation"
+  imperative_apex_no_error_handling="imperative_apex_no_error_handling"
+  missing_wire_error_handler="missing_wire_error_handler"
+  apex_call_in_loop="apex_call_in_loop"
 
 
 class Finding(BaseModel):
