@@ -1,4 +1,4 @@
-from src.apex_copilot.reasoning.graph import vote_findings
+from src.review_core.voting import vote_findings
 from src.review_core.models import Finding, Severity
 
 def test_vote_keeps_majority_drops_noise():

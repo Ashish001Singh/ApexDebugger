@@ -31,8 +31,9 @@ from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
 from config import settings
 from openai import OpenAI
-from collections import Counter
 from src.review_core.models import RuleId  # if not already imported
+from src.review_core.merging import merge_findings
+from src.review_core.voting import vote_findings
 
 # Rules the deterministic layer owns — regex is authoritative. The LLM's job is
 # only the reasoning rules regex CAN'T do; drop its claims on regex-owned rules.
@@ -86,38 +87,6 @@ def run_reasoning_graph(code: str, findings: list[Finding], filename: str) -> Re
         summary=final_state["summary"],
         llm_explanation=final_state["llm_explanation"],
     )
-
-def merge_findings(regex: list[Finding], llm: list[Finding]) ->list[Finding]:
-  seen = {(f.rule.value,f.line) for f in regex}
-
-  extra_findings = list(regex)
-  for f in llm:
-    if f.rule in REGEX_OWNED:
-      continue
-    if(f.rule.value,f.line) in seen:
-      continue
-    extra_findings.append(f)
-
-  return extra_findings
-
-def vote_findings(runs: list[list[Finding]], threshold: int) -> list[Finding]:
-    """
-    runs = N independent LLM finding-lists. Keep one representative Finding per
-    RULE that appears in >= threshold of the runs. Kills random hallucinations.
-    """
-    rule_votes = Counter()          # how many runs contain each rule
-    representative = {}             # first Finding object seen per rule
-
-    for run in runs:
-        seen_this_run = set()
-        for f in run:
-            if f.rule not in representative:
-                representative[f.rule] = f      # keep a real Finding to return
-            seen_this_run.add(f.rule)           # dedupe within the run
-        for rule in seen_this_run:
-            rule_votes[rule] += 1               # one vote per run per rule
-
-    return [representative[rule] for rule, votes in rule_votes.items() if votes >= threshold]
 
 from pathlib import Path
 
@@ -175,7 +144,7 @@ Explain why each matters and rate overall risk."""
           summary = output.summary
 
   voted = vote_findings(runs, VOTE_THRESHOLD)
-  merged_findings = merge_findings(state["findings"], voted)
+  merged_findings = merge_findings(state["findings"], voted, REGEX_OWNED)
   return{
         "findings": merged_findings,
         "summary": summary,
