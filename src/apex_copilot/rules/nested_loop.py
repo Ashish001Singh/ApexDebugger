@@ -4,7 +4,7 @@
 
 from src.review_core.models import Finding, Severity,RuleId
 import re
-from .patterns import LOOP_OPEN
+from src.review_core.patterns import LOOP_OPEN
 
 
 def check_nested_loop(code: str) -> list[Finding]:

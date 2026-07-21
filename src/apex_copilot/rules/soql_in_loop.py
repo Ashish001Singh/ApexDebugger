@@ -1,6 +1,6 @@
 import re
 from src.review_core.models import Finding, Severity
-from .patterns import LOOP_OPEN
+from src.review_core.patterns import LOOP_OPEN
 # Detects SOQL queries ([SELECT ...] or Database.query) inside for/while/do loops.
 # Apex governor limit: max 100 SOQL queries per transaction — one per loop iteration burns them fast.
 

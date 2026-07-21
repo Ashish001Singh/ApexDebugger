@@ -1,6 +1,6 @@
 import re
 from src.review_core.models import Finding, Severity
-from .patterns import LOOP_OPEN
+from src.review_core.patterns import LOOP_OPEN
 
 # Detects DML statements (insert/update/delete/upsert/merge/undelete) inside loops.
 # Apex governor limit: max 150 DML statements per transaction.
