@@ -11,3 +11,18 @@ def test_lwc_reasoning_returns_result():
     assert isinstance(result, ReviewResult)
     assert result.filename == "empty.js"
     assert isinstance(result.findings, list)
+
+
+from src.lwc_copilot.review import review as lwc_review
+
+
+def test_lwc_review_detects_unsafe_inner_html():
+    js = """\
+export default class Bad extends LightningElement {
+    renderedCallback() {
+        this.template.querySelector('div').innerHTML = this.raw;
+    }
+}"""
+    result = lwc_review(js, "", filename="bad.js")
+    rules = [f.rule for f in result.findings]
+    assert "unsafe_inner_html" in rules
