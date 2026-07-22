@@ -125,3 +125,37 @@ def test_wire_bare_property_detects():
 def test_wire_with_error_destructure_clean():
     findings = check_missing_wire_error_handler(WIRE_WITH_ERROR_HANDLER, "")
     assert findings == []
+
+
+from src.lwc_copilot.rules.apex_call_in_loop import check_apex_call_in_loop
+
+APEX_CALL_IN_LOOP = """\
+import saveRecord from '@salesforce/apex/RecordController.saveRecord';
+
+export default class Bad extends LightningElement {
+    handleSaveAll(records) {
+        for (const record of records) {
+            saveRecord({ record });
+        }
+    }
+}"""
+
+APEX_CALL_OUTSIDE_LOOP = """\
+import saveRecords from '@salesforce/apex/RecordController.saveRecords';
+
+export default class Good extends LightningElement {
+    handleSaveAll(records) {
+        saveRecords({ records });
+    }
+}"""
+
+
+def test_apex_call_in_loop_detects():
+    findings = check_apex_call_in_loop(APEX_CALL_IN_LOOP, "")
+    assert len(findings) == 1
+    assert findings[0].rule == "apex_call_in_loop"
+
+
+def test_apex_call_outside_loop_clean():
+    findings = check_apex_call_in_loop(APEX_CALL_OUTSIDE_LOOP, "")
+    assert findings == []
