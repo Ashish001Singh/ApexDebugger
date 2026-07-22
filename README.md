@@ -105,7 +105,8 @@ docs/            learning-journal.md — the reasoning behind every design decis
 | Best-practices grounding (A/B measured) + user-supplied docs | ✅ |
 | CI gate (tests + deterministic eval) | ✅ |
 | Review-on-PR GitHub Action | ✅ |
-| Multi-agent orchestrator (Apex + LWC reviewers → synthesizer) | 🔜 |
+| Multi-agent orchestrator (Apex + LWC reviewers → synthesizer) | ✅ |
+| Cross-language synthesizer (LLM: LWC↔Apex contract bugs) | 🔜 |
 | Org-metadata grounding (schema, FLS, sharing) — the org-aware moat | planned |
 | Interprocedural analysis (method-in-loop DML), VS Code extension | planned |
 

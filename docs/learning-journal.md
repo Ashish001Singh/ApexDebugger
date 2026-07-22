@@ -222,4 +222,41 @@ code-consolidation; the cross-cutting LLM synthesizer is the high-value v2 (find
 bugs no single-file linter can).
 **Principle:** Same rule as everywhere — objective consolidation → code; cross-context reasoning → LLM.
 
+---
+
+## 12. Multi-agent orchestrator (built: Apex + LWC + synthesizer)
+
+**Q: Why extract a `review_core` package instead of copy-pasting Finding/Severity/RuleId/vote_findings/merge_findings into the new LWC reviewer?**
+Why: The machinery is language-agnostic — voting, merging, and the Finding/Severity shape
+operate on `list[Finding]` regardless of whether findings came from Apex or LWC rules.
+Copy-pasting means every future fix (like the nested-parens LOOP_OPEN bug) must be applied
+twice and can silently drift. `RuleId` stays a SINGLE shared enum (not per-language) so the
+synthesizer never reconciles two vocabularies, and `merge_findings` takes a `regex_owned`
+SET AS A PARAMETER now instead of importing a hardcoded one — same function, two callers,
+each passing its own owned-rules set.
+**Principle:** Extract shared machinery when two consumers need *identical* behavior, not
+merely similar. What genuinely differs per language (the rules themselves, the LLM prompt)
+stays separate — LWC got its own `rules/` and `reasoning/graph.py`; only the plumbing moved
+to `review_core`.
+
+**Q: Why does the router group a `.js` file with a sibling `.html` instead of taking the LWC bundle folder as input?**
+Why: LWC components are folders (`myComponent/myComponent.js` + `.html` + meta), but CI/PR
+tooling hands you a flat list of changed file *paths*, not folders. Routing by "does a `.html`
+with the same stem sit next to this `.js`" works from either a single path or a folder walk,
+and degrades gracefully — a JS file with no HTML sibling still gets JS-only checks
+(`manual_dom_manipulation` just finds nothing, since it scans the template).
+**Principle:** Design the router around the shape of input you actually receive (changed-file
+paths from a PR diff), not the architecturally "cleaner" shape (a bundle folder) that's harder
+to get from the calling context.
+
+**Q: Why keep the regex layer for LWC when the rules could be LLM-only?**
+Why: The free deterministic gate (`eval/runner.py`) must never call an LLM — that's the whole
+CI-cost model. LLM-only rules mean no free gate for LWC, and every commit costs money to
+verify. Three of the five LWC patterns (`innerHTML =`, `lwc:dom="manual"`, apex-name-called-
+in-loop) are syntactically certain — same category as `soql_in_loop` — so regex nails them at
+100% recall, free. The two shakier ones (imperative-no-catch, wire-no-error) fired on ~36% of
+real ASCENT components — a signal to *measure precision in the eval*, not to abandon regex.
+**Principle:** Keep the free deterministic floor for anything syntactically decidable; reserve
+the paid LLM layer for genuine judgment calls. Measure the noisy rules; don't drop the layer.
+
 <!-- Append new entries below as we go. Keep it concept + why, skip transient debugging. -->
