@@ -30,14 +30,17 @@ GATE_PRECISION = 0.8
 GATE_RECALL = 0.8
 
 
-def score_case(expected_rules: list[str], found_rules: list[str]) -> tuple[float, float]:
+def score_case(expected_rules, found_rules):
     expected = set(expected_rules)
     found = set(found_rules)
+    if not expected:                      # negative case: success = found nothing
+        precision = 1.0 if not found else 0.0
+        recall = 1.0
+        return precision, recall
     tp = len(expected & found)
     precision = tp / len(found) if found else 0.0
     recall = tp / len(expected) if expected else 0.0
     return precision, recall
-
 
 def run_eval() -> None:
     cases = [json.loads(line) for line in GOLDEN_SET.read_text().splitlines() if line.strip()]
