@@ -293,4 +293,29 @@ to look before you touch anything.
 **Principle:** Low spread + low score = deterministic (bug OR too-narrow expected set). High spread
 = LLM noise. Read the variance signature to route the diagnosis before changing code.
 
+---
+
+## 15. When the fix is deletion: retiring a regex rule to the LLM
+
+**Q: A regex rule fired on 36% of real components and the sampled hits were ~all false positives. The instinct is to make the regex smarter. Why was the right move to delete it instead?**
+Why: The rule asked "does this promise chain handle its errors?" — which requires knowing where
+the chain *ends* (balanced parens/braces). Regex can't count balanced delimiters (same wall as the
+LOOP_OPEN nested-parens lesson). Every heuristic patch — wider window, neighbor exclusion — is a
+worse approximation of a parser, adding code to stay wrong. The project already has a layer that
+reasons over whole structures: the LLM. So the rule doesn't need a better regex; it needs a
+different layer. Deleting it removed ~78 lines and the entire false-positive source at once.
+**Principle:** When a deterministic rule keeps failing because the problem is fundamentally beyond
+what that layer can decide, the fix is to move it to the right layer, not to harden the wrong one.
+Deletion that relocates responsibility is a feature, not a retreat.
+
+**Q: How did you know it was false-positive noise and not just a strict-but-correct rule?**
+Why: You can't tell from the count (273 could be a genuinely bad codebase). You have to *read the
+hits*. One sampled file had a perfectly valid `.then().catch()` — the `.catch` just sat past the
+window. That single confirmed false positive, plus a second from neighbor-contamination, was enough
+to condemn the heuristic — because both failures were structural (every long `.then` body, every
+adjacent call), not incidental.
+**Principle:** A firing rate is not a precision measurement. Read real hits before trusting — or
+retiring — a rule. Structural false positives (a whole class of correct code) justify removal;
+incidental ones justify tuning.
+
 <!-- Append new entries below as we go. Keep it concept + why, skip transient debugging. -->
