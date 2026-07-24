@@ -15,3 +15,9 @@ def test_triple_nested_flags_both():
     rules = [f.rule.value for f in check_nested_loop(code)]
     assert "nested_loop_2" in rules
     assert "nested_loop_deep" in rules
+
+
+def test_c_style_loop_with_nested_parens_is_detected():
+    code = "for (Integer i = 0; i < list.size(); i++) {\n  for (Id j : b) {\n    System.debug(j);\n  }\n}"
+    rules = [f.rule.value for f in check_nested_loop(code)]
+    assert "nested_loop_2" in rules   # which rule fires at depth 2 here?

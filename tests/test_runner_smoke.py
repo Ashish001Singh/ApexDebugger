@@ -1,5 +1,5 @@
 from src.apex_copilot.review import review
-from src.apex_copilot.reasoning.models import ReviewResult
+from src.review_core.models import ReviewResult
 import pytest 
 
 pytestmark = pytest.mark.integration

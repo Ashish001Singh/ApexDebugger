@@ -2,10 +2,10 @@
 # NOTE: line-based — assumes one loop-open per line (standard Apex formatting).
 # Multiple loops on a single line are undercounted. Same limitation as soql_in_loop.
 
-from src.apex_copilot.reasoning.models import Finding, Severity,RuleId
+from src.review_core.models import Finding, Severity,RuleId
 import re
+from src.review_core.patterns import LOOP_OPEN
 
-_LOOP_OPEN = re.compile(r"\b(for|while|do)\b[^{;]*\{", re.IGNORECASE | re.DOTALL)
 
 def check_nested_loop(code: str) -> list[Finding]:
     findings = []
@@ -15,7 +15,7 @@ def check_nested_loop(code: str) -> list[Finding]:
         open_braces = line.count("{")
         close_braces = line.count("}")
 
-        if _LOOP_OPEN.search(line):
+        if LOOP_OPEN.search(line):
             in_loop_depth.append(brace_depth + open_braces)
             depth = len(in_loop_depth)          # ← current nesting level
             if depth == 2:

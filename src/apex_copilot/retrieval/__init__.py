@@ -6,7 +6,7 @@ TODO (Phase 3):
   - search(query_vec, top_k=5) -> list[Chunk]: pgvector cosine similarity
   - rerank(chunks, query) -> list[Chunk]: optional cross-encoder or Claude rerank
 """
-from src.apex_copilot.reasoning.models import Finding
+from src.review_core.models import Finding
 
 
 def retrieve_context(findings: list[Finding]) -> list[str]:

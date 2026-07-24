@@ -1,13 +1,9 @@
 import re
-from src.apex_copilot.reasoning.models import Finding, Severity
-
+from src.review_core.models import Finding, Severity
+from src.review_core.patterns import LOOP_OPEN
 # Detects SOQL queries ([SELECT ...] or Database.query) inside for/while/do loops.
 # Apex governor limit: max 100 SOQL queries per transaction — one per loop iteration burns them fast.
 
-_LOOP_OPEN = re.compile(
-    r"\b(for|while|do)\b[^{;]*\{",
-    re.IGNORECASE | re.DOTALL,
-)
 _SOQL = re.compile(r"\[?\s*SELECT\b|\bDatabase\.query\s*\(", re.IGNORECASE)
 
 
@@ -26,7 +22,7 @@ def check_soql_in_loop(code: str) -> list[Finding]:
         close_braces = line.count("}")
 
         # Check if this line opens a loop
-        if _LOOP_OPEN.search(line):
+        if LOOP_OPEN.search(line):
             in_loop_depth.append(brace_depth + open_braces)
 
         brace_depth += open_braces - close_braces

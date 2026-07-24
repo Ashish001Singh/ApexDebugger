@@ -1,6 +1,7 @@
 import json, statistics
 from pathlib import Path
-from src.apex_copilot.review import review
+from src.apex_copilot.review import review as apex_review_fn
+from src.lwc_copilot.review import review as lwc_review_fn
 
 GOLDEN = Path(__file__).parent / "golden_set.jsonl"
 N_RUNS = 2          # eval repeats per case; voting (3x) already inside each review()
@@ -30,8 +31,12 @@ def run_llm_eval():
         f1_scores = []                                  # collect F1 across N runs
 
         for _ in range(N_RUNS):
-            result = review(case["code"], case["id"])
-            found = { f.rule.value for f in result.findings }   # <- BLANK 1
+            lang = case.get("lang", "apex")
+            if lang == "apex":
+                result = apex_review_fn(case["code"], case["id"])
+            else:
+                result = lwc_review_fn(case.get("js", ""), case.get("html", ""), case["id"])
+            found = {f.rule.value for f in result.findings}
             s = score(expected, found)
             f1_scores.append(s["f1"])
 

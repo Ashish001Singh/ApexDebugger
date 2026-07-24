@@ -1,10 +1,10 @@
 import re
-from src.apex_copilot.reasoning.models import Finding, Severity
+from src.review_core.models import Finding, Severity
+from src.review_core.patterns import LOOP_OPEN
 
 # Detects DML statements (insert/update/delete/upsert/merge/undelete) inside loops.
 # Apex governor limit: max 150 DML statements per transaction.
 
-_LOOP_OPEN = re.compile(r"\b(for|while|do)\b[^{;]*\{", re.IGNORECASE | re.DOTALL)
 _DML = re.compile(
     r"\b(insert|update|delete|upsert|merge|undelete)\b\s+\w",
     re.IGNORECASE,
@@ -23,7 +23,7 @@ def check_dml_in_loop(code: str) -> list[Finding]:
         open_braces = line.count("{")
         close_braces = line.count("}")
 
-        if _LOOP_OPEN.search(line):
+        if LOOP_OPEN.search(line):
             in_loop_depth.append(brace_depth + open_braces)
 
         brace_depth += open_braces - close_braces

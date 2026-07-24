@@ -1,5 +1,5 @@
 from typing import Callable
-from src.apex_copilot.reasoning.models import Finding
+from src.review_core.models import Finding
 
 from .soql_in_loop import check_soql_in_loop
 from .dml_in_loop import check_dml_in_loop
