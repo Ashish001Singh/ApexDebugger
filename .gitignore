@@ -8,3 +8,7 @@ dist/
 .pytest_cache/
 *.log
 .DS_Store
+
+# Local tooling state
+.claude/
+.sfdx/
