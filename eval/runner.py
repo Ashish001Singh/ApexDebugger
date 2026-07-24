@@ -22,8 +22,7 @@ APEX_REGEX_RULES = {"soql_in_loop","dml_in_loop","hardcoded_id","hardcoded_exter
                "nested_loop_2","nested_loop_deep"}
 
 LWC_REGEX_RULES = {"unsafe_inner_html", "manual_dom_manipulation",
-                   "imperative_apex_no_error_handling", "missing_wire_error_handler",
-                   "apex_call_in_loop"}
+                   "missing_wire_error_handler", "apex_call_in_loop"}
 
 GOLDEN_SET = Path(__file__).parent / "golden_set.jsonl"
 GATE_PRECISION = 0.8

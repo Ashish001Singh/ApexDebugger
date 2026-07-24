@@ -52,49 +52,6 @@ def test_standard_template_clean():
     assert findings == []
 
 
-from src.lwc_copilot.rules.imperative_apex_no_error_handling import (
-    check_imperative_apex_no_error_handling,
-)
-
-IMPERATIVE_NO_CATCH = """\
-import getContacts from '@salesforce/apex/ContactController.getContacts';
-
-export default class Bad extends LightningElement {
-    handleClick() {
-        getContacts()
-            .then((result) => {
-                this.contacts = result;
-            });
-    }
-}"""
-
-IMPERATIVE_WITH_CATCH = """\
-import getContacts from '@salesforce/apex/ContactController.getContacts';
-
-export default class Good extends LightningElement {
-    handleClick() {
-        getContacts()
-            .then((result) => {
-                this.contacts = result;
-            })
-            .catch((error) => {
-                this.error = error;
-            });
-    }
-}"""
-
-
-def test_imperative_call_without_catch_detects():
-    findings = check_imperative_apex_no_error_handling(IMPERATIVE_NO_CATCH, "")
-    assert len(findings) == 1
-    assert findings[0].rule == "imperative_apex_no_error_handling"
-
-
-def test_imperative_call_with_catch_clean():
-    findings = check_imperative_apex_no_error_handling(IMPERATIVE_WITH_CATCH, "")
-    assert findings == []
-
-
 from src.lwc_copilot.rules.missing_wire_error_handler import check_missing_wire_error_handler
 
 WIRE_NO_ERROR_HANDLER = """\

@@ -42,9 +42,12 @@ from src.review_core.voting import vote_findings
 
 # Rules the deterministic layer owns — regex is authoritative. The LLM's job is
 # only the reasoning rules regex CAN'T do; drop its claims on regex-owned rules.
+# imperative_apex_no_error_handling was dropped from the regex layer: judging
+# whether a promise chain handles its errors needs balanced-delimiter parsing
+# (beyond regex) and the fixed-window heuristic produced ~all false positives
+# on real code. It's now LLM-owned — the LLM can reason about the whole chain.
 REGEX_OWNED = {
     RuleId.unsafe_inner_html, RuleId.manual_dom_manipulation,
-    RuleId.imperative_apex_no_error_handling,
     RuleId.missing_wire_error_handler, RuleId.apex_call_in_loop,
 }
 
