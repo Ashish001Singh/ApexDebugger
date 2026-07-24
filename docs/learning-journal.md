@@ -293,4 +293,29 @@ to look before you touch anything.
 **Principle:** Low spread + low score = deterministic (bug OR too-narrow expected set). High spread
 = LLM noise. Read the variance signature to route the diagnosis before changing code.
 
+---
+
+## 14. Closing the LWC-LLM blind spot with LLM-only golden cases
+
+**Q: The LWC reviewer's LLM layer had zero eval coverage. How do you build a case that actually tests it?**
+Why: Every existing LWC golden case expected a `REGEX_OWNED` rule → the regex layer caught it →
+`merge_findings` dropped the LLM's version → the LLM's output never reached the score. The fix is
+a case whose expected rule is one the LWC regex layer does NOT own (`exception_risk`,
+`high_complexity`, `duplicate_method`). Then the finding can *only* come from the LLM, so the
+score moves if and only if the LLM works. Build each case regex-clean by construction (no
+innerHTML, no bare wire, no apex-in-loop) and verify with `run_all_rules(js, html) == []` before
+trusting it.
+**Principle:** To test a specific layer, construct an input only that layer can respond to. If any
+other layer can produce the expected output, the case doesn't isolate what you think it does.
+
+**Q: First measurement — two rules at F1=1.00/spread=0, one at F1=0.50/spread=1.00. What does that tell you, immediately?**
+Why: `high_complexity` and `duplicate_method` are mechanical (count nesting; compare two bodies)
+→ the LLM does them reliably. `exception_risk` (is `data.records[0].Name` a null-risk or normal
+LWC?) is a borderline judgment → the model flickers, caught it one run, missed the next. spread=1.00
+is the maximum-noise signature — same shape as Apex's wobbly `hardcoded_id`. The variance sorted the
+three rules into "trust it" vs "don't" on the very first run.
+**Principle:** Spread ranks your rules by trustworthiness for free. Mechanical judgments are stable;
+genuinely ambiguous ones flicker — and the flicker is data, not a bug to hide. Keep the noisy case
+in the advisory eval (never the CI gate) as living documentation of where the LLM is unreliable.
+
 <!-- Append new entries below as we go. Keep it concept + why, skip transient debugging. -->
