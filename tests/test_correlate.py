@@ -26,10 +26,10 @@ def test_lwc_calling_insecure_apex_flags_cross_language_risk():
     ]
     lwc_sources = {"accountList.js": LWC_CALLING_ACCOUNTCONTROLLER}
 
-    findings = correlate(results, lwc_sources)
+    results = correlate(results, lwc_sources)
 
-    assert len(findings) == 1
-    assert findings[0].rule == "cross_language_security_risk"
+    assert len(results) == 1
+    assert results[0].findings[0].rule == "cross_language_security_risk"
 
 
 def test_lwc_calling_secure_apex_no_flag():
@@ -39,9 +39,9 @@ def test_lwc_calling_secure_apex_no_flag():
     ]
     lwc_sources = {"accountList.js": LWC_CALLING_ACCOUNTCONTROLLER}
 
-    findings = correlate(results, lwc_sources)
+    results = correlate(results, lwc_sources)
 
-    assert findings == []
+    assert results == []
 
 
 def test_lwc_calling_unreviewed_controller_no_flag():
@@ -51,9 +51,9 @@ def test_lwc_calling_unreviewed_controller_no_flag():
     ]
     lwc_sources = {"accountList.js": LWC_CALLING_ACCOUNTCONTROLLER}
 
-    findings = correlate(results, lwc_sources)
+    results = correlate(results, lwc_sources)
 
-    assert findings == []
+    assert results == []
 
 
 # ── resolve_controller_findings: pull in unchanged controllers, regex-only ──

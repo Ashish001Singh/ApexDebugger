@@ -56,7 +56,9 @@ from src.review_core.models import ReviewResult, Finding, Severity
 
 def _finding(rule, severity, line):
     return Finding(rule=rule, severity=severity, line=line, message="x", suggestion="y")
-
+    
+def _finding_msg(rule, line, message):
+    return Finding(rule=rule, severity=Severity.HIGH, line=line, message=message, suggestion="y")
 
 def test_synthesize_sorts_findings_by_severity_within_each_result():
     result = ReviewResult(
@@ -83,3 +85,18 @@ def test_synthesize_preserves_one_result_per_file():
 
     filenames = [r.filename for r in synthesized]
     assert filenames == ["Foo.cls", "bar.js"]
+
+def test_synthesize_collapses_duplicate_findings_and_merges_messages():
+    r1 = ReviewResult(filename="(cross-language) · AccountController",
+                      findings=[_finding_msg("cross_language_security_risk", 1, "leadList.js calls it")])
+    r2 = ReviewResult(filename="(cross-language) · AccountController",
+                      findings=[_finding_msg("cross_language_security_risk", 1, "acctList.js calls it")])
+
+    synthesized = synthesize([r1, r2])
+
+    assert len(synthesized) == 1          # both share one filename → one result
+    findings = synthesized[0].findings
+    assert len(findings) == 1            # collapsed to how many?
+    assert "leadList.js" in findings[0].message
+    assert "acctList.js" in findings[0].message   # no caller lost
+

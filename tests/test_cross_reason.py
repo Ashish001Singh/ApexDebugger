@@ -44,9 +44,9 @@ def test_flags_injection_when_input_concatenated():
         lwc_file="leadFinder.js", lwc_js=LWC_PASSES_TERM,
         apex_file="LeadSearch.cls", apex_code=APEX_CONCATENATES,
     )
-    findings = cross_reason([pair])
+    results = cross_reason([pair])
 
-    rules = {f.rule.value for f in findings}
+    rules = {f.rule.value for f in results[0].findings}
     assert RuleId.cross_language_injection_risk.value in rules   # BLANK 1: what rule MUST be present?
 
 
@@ -56,6 +56,6 @@ def test_no_flag_when_input_bound():
         lwc_file="leadFinder.js", lwc_js=LWC_PASSES_TERM,
         apex_file="LeadSearch.cls", apex_code=APEX_BINDS,
     )
-    findings = cross_reason([pair])
+    results = cross_reason([pair])
 
-    assert findings == []   # BLANK 2: the false-positive guard — what must be true of findings?
+    assert results == []   # BLANK 2: the false-positive guard — what must be true of findings?

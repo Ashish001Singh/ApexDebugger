@@ -452,4 +452,22 @@ wobble 1-in-N even with a good prompt. Binary pass/fail belongs where the value 
 (the eval's FP-rate on the clean twin), not a single-shot integration assert. Fix the prompt so it's
 stable, but don't pretend a probabilistic node is deterministic.
 
+---
+
+## 21. The synthesizer: identity before dedup, and group ≠ drop
+
+**Q: `synthesize` was supposed to consolidate findings across files. Why did fixing it start with the _correlate/cross_reason_ output, not with `synthesize` itself?**
+Why: You can't dedup until every finding has a unique, honest identity — and the cross findings didn't. `correlate` bucketed every cross-language finding under one synthetic filename `"(cross-language)"` with a placeholder `line=1`. The dedup key `(filename, rule, line)` then collided: two *different* insecure controllers produced the identical key, so dedup would silently drop a real security flag. The synthetic address was a stand-in, not a real coordinate, so it stopped being unique. Fix the identity first: give each cross finding the **controller name** in its filename (`"(cross-language) · AccountController"`), so the coordinate discriminates again. Only then is dedup safe.
+**Principle:** Deduplication is only as trustworthy as the identity you dedup on. A placeholder key (synthetic filename, `line=1`) looks like an address but isn't one — collapse on it and you delete signal. Establish real identity before you collapse anything.
+
+**Q: Two different LWCs call the same insecure controller. One finding or two?**
+Why: One. The fix lives in the *controller* (add CRUD/FLS, or parameterize the query) — fix it once and every caller goes clean. The callers didn't each introduce a bug; they're each exposed to the same one. So the **controller (and its specific vulnerable line) is the unit of a finding**, and the callers are context. Two callers of one flaw → same key → collapse. Two *different* flaws in one controller → different lines → stay separate (the key already handles that).
+**Principle:** The unit of a finding is the thing you fix, not the place you noticed it. Count bugs by remediation, not by observation site.
+
+**Q: When two findings collapse, why merge their messages instead of just keeping one?**
+Why: Blind dedup *drops*; a synthesizer must *group* — collapse the identity but **union the context**. Keeping only the first finding loses "acctList.js also calls this." The action is the same (one controller fix), so it's one finding — but the caller list is information, so it's folded into the surviving message (idempotent append, guarded against re-run bloat). Full structured caller-merge (parsed names, not appended prose) waits for a `subject`/caller field on `Finding` — deferred until the linking/rollup phase actually needs it across the shared model.
+**Principle:** Group, don't drop. Collapsing duplicates should preserve every distinct piece of context the duplicates carried, even when the remediation is singular.
+
+**Corollary — a clean file is still a result.** Rebuilding `synthesize` from findings alone dropped files with zero findings ("Foo.cls: no issues" vanished). Seed the output with every input filename first, then fill findings. Absence of findings is itself a reportable outcome.
+
 <!-- Append new entries below as we go. Keep it concept + why, skip transient debugging. -->
