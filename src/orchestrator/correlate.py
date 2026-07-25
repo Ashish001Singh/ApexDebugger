@@ -19,7 +19,7 @@ def correlate(results , lwc_sources) -> list[Finding]:
                     rule=RuleId.cross_language_security_risk.value,
                     severity=Severity.HIGH,
                     line=1,
-                    message=f"This component calls Apex controller '{controller}', which has no CRUD/FLS or sharing enforcement.",
+                    message=f"{Path(lwc_file).name} calls Apex controller '{controller}', which has no CRUD/FLS or sharing enforcement.",
                     suggestion=f"Enforce access in {controller} (WITH USER_MODE / as user / Schema checks) before exposing it to the client.",
                 ))
   return findings

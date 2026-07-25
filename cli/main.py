@@ -6,7 +6,8 @@ from src.orchestrator.route import route
 from src.orchestrator.synthesize import synthesize
 from src.apex_copilot.review import review as apex_review_fn
 from src.lwc_copilot.review import review as lwc_review_fn
-from src.review_core.models import Severity
+from src.orchestrator.correlate import correlate
+from src.review_core.models import Severity, ReviewResult
 
 
 @click.group()
@@ -33,6 +34,12 @@ def apex_review(files: tuple[str, ...], json_output: bool, min_severity: str) ->
         js = bundle.js.read_text()
         html = bundle.html.read_text() if bundle.html else ""
         results.append(lwc_review_fn(js, html, filename=str(bundle.js)))
+
+    # cross-language: derive findings from the seam between LWC and Apex
+    lwc_sources = {str(b.js): b.js.read_text() for b in routed.lwc_bundles}
+    cross = correlate(results, lwc_sources)
+    if cross:
+        results.append(ReviewResult(filename="(cross-language)", findings=cross))
 
     results = synthesize(results)
 
