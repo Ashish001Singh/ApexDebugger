@@ -31,6 +31,10 @@ def apex_review(files: tuple[str, ...], json_output: bool, min_severity: str) ->
             click.echo(json.dumps([f.model_dump() for f in filtered], indent=2))
             continue
 
+        if result.summary and not result.findings:
+            click.secho(f"\n🔎 Summary\n{result.summary}\n", fg="magenta", bold=True)
+            continue
+        
         if not filtered:
             click.secho(f"{result.filename}: no issues found.", fg="green")
             continue

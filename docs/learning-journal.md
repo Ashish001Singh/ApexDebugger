@@ -470,4 +470,18 @@ Why: Blind dedup *drops*; a synthesizer must *group* — collapse the identity b
 
 **Corollary — a clean file is still a result.** Rebuilding `synthesize` from findings alone dropped files with zero findings ("Foo.cls: no issues" vanished). Seed the output with every input filename first, then fill findings. Absence of findings is itself a reportable outcome.
 
+---
+
+## 22. The rollup: an advisory LLM node, and why it breaks the voting/gating rules
+
+**Q: Every other LLM node in this system votes 3× and always runs. The rollup does neither — one call, and only above a finding threshold. Why the different rules?**
+Why: Because the rollup isn't a *gate* — it's *advice*. The detection nodes (graph, cross_reason) emit findings that can block a merge, so they must be stable: a finding that flickers 1/3 is noise, and voting kills it. The rollup emits a prose summary a human reads and judges; if the phrasing wobbles between runs, nothing breaks. Stability you can't act on isn't worth paying 3× for. Same logic on gating: summarizing 1–2 findings adds nothing over just reading them, so it's gated at ≥3 findings — don't spend a token where the reader's own eyes are cheaper. The output shape follows too: free prose (`chat.completions.create`, no `response_format`), not a structured `Finding`.
+**Principle:** Match the reliability machinery to the cost of being wrong. A gate needs consensus and always-on; advice needs neither. Voting and always-running are not free defaults — they're what you buy when a wrong/missing answer has teeth.
+
+**Q: The rollup reads findings the system already produced. What's its version of a false-positive guard?**
+Why: "Summarize ONLY the findings given; do NOT invent issues, and if they're unrelated, say so rather than forcing a theme." A summarizer's failure mode isn't missing a bug — it's *fabricating a narrative*: inventing a root cause that isn't there, or claiming five unrelated findings are one theme because the prompt asked for themes. The guard is the advisory twin of the injection node's "value-side concatenation is safe" line — both stop the model from over-firing on the shape it was told to look for.
+**Principle:** Every LLM node that produces output has an over-firing failure mode; name it and guard it in the prompt. For a detector it's false positives; for a summarizer it's fabricated structure. "Say they're unrelated" is as important as "find the theme."
+
+**Plumbing note:** the summary rides back as a findings-empty `ReviewResult` with the `summary` field set, prepended so it renders first. Formatters gained a `summary and not findings` branch — a real clean file (no summary, no findings) still reads "no issues"; only the rollup block renders as a summary.
+
 <!-- Append new entries below as we go. Keep it concept + why, skip transient debugging. -->

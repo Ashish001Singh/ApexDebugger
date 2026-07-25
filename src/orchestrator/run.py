@@ -14,7 +14,7 @@ from src.apex_copilot.review import review as apex_review_fn
 from src.apex_copilot.rules import run_all_rules as run_apex_rules
 from src.lwc_copilot.review import review as lwc_review_fn
 from src.review_core.models import ReviewResult
-
+from src.orchestrator.rollup import rollup
 
 from src.orchestrator.cross_reason import cross_reason, CrossPair
 
@@ -101,4 +101,8 @@ def review_paths(paths: list[Path], resolve_controllers_from: Path | None = None
     pairs = _build_pairs(routed.lwc_bundles, apex_sources)
     results += cross_reason(pairs)
 
-    return synthesize(results)
+    final = synthesize(results)
+    summary = rollup(final)
+    if summary:
+        final.insert(0, ReviewResult(filename="(summary)", findings=[], summary=summary))
+    return final
