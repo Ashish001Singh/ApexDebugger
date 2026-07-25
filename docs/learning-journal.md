@@ -360,4 +360,29 @@ these rules were first built ("three solid, two shaky as regex").
 It means the rule needs knowledge the layer doesn't have. Stop patching; move it to the layer that can
 reason. Converging exemptions justify an allowlist; diverging ones justify relocation.
 
+---
+
+## 17. The cross-language finding: derive, don't merge
+
+**Q: The cross-language step "passes both reviewers' output in" — isn't that just merge with two inputs?**
+Why: No — and the difference decides the design. `merge_findings` *selects* from findings that already
+exist (keep/drop on `(rule, line)`), all about ONE file's two layers. The cross-language step *derives*
+a finding that existed in NEITHER input, from the *relationship* between two different files: an LWC
+imports `@salesforce/apex/AccountController.x`, the Apex review flagged `AccountController.cls` with
+`missing_crud_fls` → emit `cross_language_security_risk` on the component. Three distinct verbs, three
+functions: `merge` selects (per file, two layers), `synthesize` consolidates (across files), `correlate`
+derives (across the seam). Keeping them separate meant the feature was a pure ADDITION — `synthesize`
+and both reviewers didn't change at all.
+**Principle:** Name the verb before you name the function. Select, consolidate, and derive are different
+operations; collapsing them into one "merge" hides the one that carries the product value.
+
+**Q: Why is this security correlation pure code, when the plan called it the "LLM synthesizer"?**
+Why: The v1 signal — "does the called controller carry a security finding?" — is a set-membership check
+(match the imported controller name against Apex results that have a security rule). One right answer →
+code, per the thesis. Free, deterministic, CI-gateable. The LLM only earns its cost on subtler seams
+(data-flow: unsanitized LWC input reaching a SOQL string) — a v2 concern. The valuable part wasn't the
+LLM; it was noticing the *relationship* is a first-class thing to check.
+**Principle:** "Cross-language" doesn't automatically mean "needs the LLM." Check whether the correlation
+is objective first — the cheapest layer that can answer correctly wins, same as everywhere.
+
 <!-- Append new entries below as we go. Keep it concept + why, skip transient debugging. -->
