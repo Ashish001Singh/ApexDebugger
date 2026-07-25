@@ -19,6 +19,9 @@ _SEV_ICON = {"high": "🔴", "medium": "🟡", "low": "🔵", "info": "⚪"}
 
 
 def format_result(result: ReviewResult) -> str:
+    
+    if result.summary and not result.findings:
+        return f"## 🔎 Summary\n\n{result.summary}"
     if not result.findings:
         return f"### `{result.filename}`\n\n✅ No issues found."
 
