@@ -30,6 +30,8 @@ class RuleId(str,Enum):
   imperative_apex_no_error_handling="imperative_apex_no_error_handling"
   missing_wire_error_handler="missing_wire_error_handler"
   apex_call_in_loop="apex_call_in_loop"
+  # Cross-language: an LWC calls an Apex controller that has a security gap.
+  cross_language_security_risk="cross_language_security_risk"
 
 
 class Finding(BaseModel):
