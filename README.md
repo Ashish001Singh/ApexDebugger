@@ -1,8 +1,14 @@
-# ApexDebugger — hybrid AI code reviewer for Salesforce Apex
+# ApexDebugger — hybrid AI code reviewer for Salesforce Apex + LWC
 
 An agentic code reviewer that catches governor-limit risks, security gaps (CRUD/FLS,
-sharing), and design smells in Apex — built as a **deterministic rules engine + LLM
-reasoning layer**, gated by a labeled golden eval set with F1 scoring.
+sharing), and design smells in Apex **and** Lightning Web Components — built as a
+**deterministic rules engine + LLM reasoning layer**, gated by a labeled golden eval
+set with F1 scoring.
+
+**The differentiator: it reasons _across files_.** Most Salesforce linters read one file
+at a time. ApexDebugger traces user input from an LWC into the Apex controller it calls
+and flags injection that lives in the **seam** between them — a bug no single-file tool
+can see. (See *Cross-language reasoning* below.)
 
 Built by a Salesforce architect (8 yrs, 13 certs incl. Sharing & Visibility Architect)
 encoding real review judgment into a measurable AI system.
@@ -49,13 +55,29 @@ Every finding type is scored against a hand-labeled golden set (`eval/golden_set
 — review judgment frozen into data.
 
 - `eval/runner.py` — **deterministic gate**: regex layer vs golden labels. Free,
-  reproducible, runs in CI on every PR. Currently 10/10 cases at 1.00 precision/recall.
+  reproducible, runs in CI on every PR. Currently 17/17 cases at 1.00 precision/recall.
 - `eval/llm_eval.py` — **probabilistic eval**: full pipeline, N runs per case, reports
   mean F1 **and spread**. Spread doubles as a diagnostic: low spread + low score =
   deterministic bug (fix the code); high spread = LLM noise (fix the prompt).
 - Grounding was **A/B tested** (with/without): general SF best practices gave zero lift
   (the model already knows them) — so grounding effort targets project/org-specific docs,
   where the model has a genuine knowledge gap.
+
+## Cross-language reasoning — the multi-file seam
+
+Single-file linters miss bugs that only exist *between* files. A multi-agent orchestrator
+routes each file to its reviewer (Apex / LWC), then runs two cross-file passes:
+
+- **`correlate` (deterministic)** — an LWC calling an Apex controller that lacks CRUD/FLS
+  or sharing enforcement is a security risk *at the call site*. Pure set-membership over
+  findings — bounded, so it's plain code.
+- **`cross_reason` (LLM data-flow)** — traces untrusted LWC input into unsafe dynamic
+  SOQL/DML in the Apex it calls. Whether concatenation is *actually* exploitable is a
+  judgment call (a bound value is safe; query-string concatenation is not) — unbounded,
+  so it's an LLM node with 3× voting. On an LWC-only PR the unchanged controller is
+  regex-resolved from the repo for free, so the seam is still checked.
+
+The layer split follows one rule: **bounded-and-decidable → code; unbounded-judgment → LLM.**
 
 ## What it catches
 
@@ -84,15 +106,15 @@ PYTHONPATH=. uv run uvicorn app:app --reload              # POST /review API
 ## Repo map
 
 ```
-src/apex_copilot/
-  rules/         deterministic checks — one pure function per rule + registry
-  reasoning/     LangGraph graph, RuleId taxonomy, voting + merge logic
-  kb/            best-practices grounding doc (small-corpus RAG)
-eval/            golden set + deterministic runner + LLM eval (F1 + spread)
-tests/           unit (CI) + integration (manual, marked)
-cli/ · app.py    click CLI · FastAPI endpoint
-docs/            learning-journal.md — the reasoning behind every design decision
-.github/         CI: unit tests + deterministic eval gate on every PR
+src/apex_copilot/   Apex reviewer: regex rules + LangGraph reasoning + grounding
+src/lwc_copilot/    LWC reviewer: regex rules + LangGraph reasoning
+src/orchestrator/   route → per-file review → correlate → cross_reason → synthesize
+src/review_core/    shared RuleId taxonomy, voting, merge, models (both languages)
+eval/               golden set + deterministic runner + LLM eval (F1 + spread)
+tests/              unit (CI) + integration (manual, marked)
+cli/ · app.py       click CLI · FastAPI endpoint
+docs/               learning-journal.md — the reasoning behind every design decision
+.github/            CI: unit tests + deterministic eval gate + review-on-PR
 ```
 
 ## Roadmap
@@ -105,9 +127,10 @@ docs/            learning-journal.md — the reasoning behind every design decis
 | Best-practices grounding (A/B measured) + user-supplied docs | ✅ |
 | CI gate (tests + deterministic eval) | ✅ |
 | Review-on-PR GitHub Action | ✅ |
-| Multi-agent orchestrator (Apex + LWC reviewers → synthesizer) | ✅ |
+| Multi-agent orchestrator (Apex + LWC reviewers, cross-file passes) | ✅ |
 | Cross-language correlator (LWC→Apex security seam, deterministic) | ✅ |
-| Cross-language data-flow reasoning (LLM: unsanitized input across the seam) | 🔜 |
+| Cross-language data-flow reasoning (LLM: unsanitized input across the seam) | ✅ |
+| Cross-file synthesizer (dedup + root-cause rollup) | 🔜 |
 | Org-metadata grounding (schema, FLS, sharing) — the org-aware moat | planned |
 | Interprocedural analysis (method-in-loop DML), VS Code extension | planned |
 
