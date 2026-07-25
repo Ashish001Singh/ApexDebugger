@@ -6,8 +6,9 @@ reaching unsafe dynamic SOQL/DML in the Apex (injection across the seam).
 from dataclasses import dataclass
 from openai import OpenAI
 from config import settings
-from src.review_core.models import Finding, LLMReviewOutput
+from src.review_core.models import Finding, LLMReviewOutput,ReviewResult
 from src.review_core.voting import vote_findings
+from pathlib import Path
 
 client = OpenAI(api_key=settings.openai_api_key)
 VOTE_RUNS = 3
@@ -81,8 +82,14 @@ Report cross_language_injection_risk only if user input flows into unsafe dynami
     return [f for f in voted if f.rule.value == "cross_language_injection_risk"]
 
 
-def cross_reason(pairs: list[CrossPair]) -> list[Finding]:
-    findings: list[Finding] = []
+def cross_reason(pairs: list[CrossPair]) -> list[ReviewResult]:
+    results = []
     for pair in pairs:
-        findings.extend(_reason_one(pair))
-    return findings
+        findings = _reason_one(pair)
+        if findings:                                    # only emit when there's a hit
+            controller = Path(pair.apex_file).stem
+            results.append(ReviewResult(
+                filename=f"(cross-injection) · {controller}",
+                findings=findings,
+            ))
+    return results

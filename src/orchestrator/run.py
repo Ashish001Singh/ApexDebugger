@@ -96,11 +96,9 @@ def review_paths(paths: list[Path], resolve_controllers_from: Path | None = None
     lwc_sources = {str(b.js): b.js.read_text() for b in routed.lwc_bundles}
     cross = correlate(results, lwc_sources)
     if cross:
-        results.append(ReviewResult(filename="(cross-language)", findings=cross))
+        results += cross
 
     pairs = _build_pairs(routed.lwc_bundles, apex_sources)
-    injection = cross_reason(pairs)
-    if injection:
-        results.append(ReviewResult(filename="(cross-injection)", findings=injection))
+    results += cross_reason(pairs)
 
     return synthesize(results)
