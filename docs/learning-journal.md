@@ -402,4 +402,54 @@ experts always agree on the answer from fixed inputs? → bounded → code. Does
 judgment over open-ended situations? → unbounded → LLM. "Cross-file" and "sounds advanced" are
 distractions; bounded-vs-unbounded is the cut.
 
+---
+
+## 19. cross_reason: the LLM that reads across the seam — and the true-negative scoring hole
+
+**Q: The cross-language SECURITY check was pure code (§18, bounded set-membership). So why is the cross-language INJECTION check an LLM node with 3× voting?**
+Why: Same two files, different question shape. Security asked "does the controller have a security
+finding?" — a lookup, bounded, one answer. Injection asks "does *this* untrusted LWC input reach an
+*unsafe* dynamic query, and is it actually unsafe (bind var / escapeSingleQuotes / static SELECT =
+safe)?" — that's data-flow tracing across a language boundary plus a judgment call on whether the sink
+is sanitized. Unbounded → LLM. It's the §18 test applied one level deeper: *cross-language* didn't
+decide the layer; *bounded-vs-unbounded* did, again. So `cross_reason` builds an (LWC, Apex-it-calls)
+pair, runs the model 3× and keeps findings that clear VOTE_THRESHOLD=2 — the same self-consistency
+pattern as graph.py, because a security verdict that flickers 1/3 is noise, not signal.
+**Principle:** "Cross-file" is never the deciding attribute. Ask the question's shape every time, at
+every layer — the same seam can carry both a lookup (code) and a judgment (LLM).
+
+**Q: The clean twin — an LWC feeding an Apex that *binds* the input — scored F1=0.00 even though the model correctly flagged nothing. Why, and what did that expose?**
+Why: The case's `expected_rules=[]`. The old `score` computed precision `tp/(tp+fp)` = `0/0` → 0.0 by
+convention. So a **correct true negative and a false positive both score 0.00** — F1 can't tell them
+apart when nothing is expected. The negative cases (clean twins) are the whole point of a
+false-positive guard, and the scorer was blind to them. Fix: guard empty-expected at the top — found
+nothing → precision/recall/F1 = 1.0 (rewarded true negative); found something → 0.0 (real false
+positive). Same fix runner.py already had; llm_eval.py's `score` never got it.
+**Principle:** A metric that can't distinguish "correctly silent" from "wrongly loud" makes your
+negative tests meaningless. When expected is empty, absence *is* the correct answer — score it as a
+win, or the clean twin proves nothing.
+
+---
+
+## 20. The clean twin earns its keep: value-side vs query-side concatenation
+
+**Q: The integration test's positive case (concatenated SOQL) passed first try. The NEGATIVE case — an LWC feeding an Apex that binds the input — failed, flagging injection. Was the test wrong?**
+Why: No — the test was right, the *model* was wrong, and the negative case is what caught it. The
+"safe" Apex was `String pattern = '%' + term + '%'; ... WHERE Name LIKE :pattern`. That `+ term +`
+concatenation builds a **value**, which is then **bound** — the user input never enters the query
+string, so it's injection-proof (textbook-safe Apex). But the model saw `+ term +` and pattern-matched
+"concatenation = injection." The prompt said "bind variables are safe" but never distinguished
+**value-side** concatenation (safe: build a value, bind it) from **query-side** concatenation (unsafe:
+build the query text passed to `Database.query()`). One line added to the prompt to draw that line, and
+the false positive vanished across every re-run.
+**Principle:** Negative/clean-twin tests aren't padding — they're how you find the false-positive
+engine. A detector that only has positive cases will happily over-fire and you'll never know. The clean
+twin failing is the test *working*: it localized a real gap in the model's reasoning that a positive-only
+suite is structurally blind to.
+
+**Corollary — probabilistic asserts are inherently flaky.** `assert findings == []` on an LLM node can
+wobble 1-in-N even with a good prompt. Binary pass/fail belongs where the value is *measured over runs*
+(the eval's FP-rate on the clean twin), not a single-shot integration assert. Fix the prompt so it's
+stable, but don't pretend a probabilistic node is deterministic.
+
 <!-- Append new entries below as we go. Keep it concept + why, skip transient debugging. -->

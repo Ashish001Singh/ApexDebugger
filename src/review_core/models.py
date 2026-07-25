@@ -32,6 +32,7 @@ class RuleId(str,Enum):
   apex_call_in_loop="apex_call_in_loop"
   # Cross-language: an LWC calls an Apex controller that has a security gap.
   cross_language_security_risk="cross_language_security_risk"
+  cross_language_injection_risk="cross_language_injection_risk"
 
 
 class Finding(BaseModel):
