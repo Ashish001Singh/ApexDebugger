@@ -15,8 +15,27 @@ from src.apex_copilot.rules import run_all_rules as run_apex_rules
 from src.lwc_copilot.review import review as lwc_review_fn
 from src.review_core.models import ReviewResult
 
+
+from src.orchestrator.cross_reason import cross_reason, CrossPair
+
 _APEX_IMPORT = re.compile(r"@salesforce/apex/(\w+)\.\w+")
 
+def _build_pairs(lwc_bundles, apex_sources: dict[str, tuple[str,str]]) -> list[CrossPair]:
+    """apex_sources: {ControllerStem: cls_source}. Pair each LWC with each
+    controller it imports that we actually have the source for."""
+    pairs = []
+    for bundle in lwc_bundles:
+        js = bundle.js.read_text()
+        for controller in set(_APEX_IMPORT.findall(js)):
+            if controller in apex_sources:          # we have its source
+                path, code = apex_sources[controller]
+                pairs.append(CrossPair(
+                    lwc_file=str(bundle.js),
+                    lwc_js=js,
+                    apex_file=path,      # ← what filename? (you have the stem→source map; need stem→path too)
+                    apex_code=code,
+                ))
+    return pairs
 
 def resolve_controller_findings(
     lwc_bundles, existing_results: list[ReviewResult], repo_root: Path
@@ -54,21 +73,34 @@ def review_paths(paths: list[Path], resolve_controllers_from: Path | None = None
     correlation works even when the PR didn't change the Apex file.
     """
     routed = route(paths)
-
+    
     results: list[ReviewResult] = []
+    apex_sources: dict[str, tuple[str, str]] = {}
+
     for apex_path in routed.apex_files:
+        apex_sources[apex_path.stem] = (str(apex_path), apex_path.read_text())
         results.append(apex_review_fn(apex_path.read_text(), filename=str(apex_path)))
+
     for bundle in routed.lwc_bundles:
         js = bundle.js.read_text()
         html = bundle.html.read_text() if bundle.html else ""
         results.append(lwc_review_fn(js, html, filename=str(bundle.js)))
 
     if resolve_controllers_from is not None:
-        results += resolve_controller_findings(routed.lwc_bundles, results, resolve_controllers_from)
+        resolved = resolve_controller_findings(routed.lwc_bundles, results, resolve_controllers_from)
+        results += resolved
+        for r in resolved:
+            stem = Path(r.filename).stem
+            apex_sources.setdefault(stem, (r.filename, Path(r.filename).read_text()))
 
     lwc_sources = {str(b.js): b.js.read_text() for b in routed.lwc_bundles}
     cross = correlate(results, lwc_sources)
     if cross:
         results.append(ReviewResult(filename="(cross-language)", findings=cross))
+
+    pairs = _build_pairs(routed.lwc_bundles, apex_sources)
+    injection = cross_reason(pairs)
+    if injection:
+        results.append(ReviewResult(filename="(cross-injection)", findings=injection))
 
     return synthesize(results)

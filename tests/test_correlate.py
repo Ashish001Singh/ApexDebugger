@@ -3,6 +3,7 @@ from src.orchestrator.correlate import correlate
 from src.orchestrator.run import resolve_controller_findings
 from src.orchestrator.route import LwcBundle
 from src.review_core.models import ReviewResult, Finding, Severity
+from src.orchestrator.run import resolve_controller_findings, _build_pairs
 
 
 def _finding(rule):
@@ -100,3 +101,15 @@ def test_skips_controller_already_reviewed(tmp_path):
     extra = resolve_controller_findings([bundle], existing_results=already, repo_root=tmp_path)
 
     assert extra == []   # already in the reviewed set → don't re-scan
+
+def test_build_pairs_matches_lwc_to_controller_source(tmp_path):
+    js = tmp_path / "leadList.js"
+    js.write_text(LWC_CALLING_ACCOUNTCONTROLLER)   # imports AccountController
+    bundle = LwcBundle(js=js, html=None)
+    apex_sources = {"AccountController": ("AccountController.cls", INSECURE_CONTROLLER)}
+
+    pairs = _build_pairs([bundle], apex_sources)
+
+    assert len(pairs) == 1
+    assert pairs[0].apex_code == INSECURE_CONTROLLER
+    assert pairs[0].lwc_file == str(js)

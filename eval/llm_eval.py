@@ -2,12 +2,17 @@ import json, statistics
 from pathlib import Path
 from src.apex_copilot.review import review as apex_review_fn
 from src.lwc_copilot.review import review as lwc_review_fn
+from src.orchestrator.cross_reason import cross_reason, CrossPair
 
 GOLDEN = Path(__file__).parent / "golden_set.jsonl"
 N_RUNS = 2          # eval repeats per case; voting (3x) already inside each review()
 GATE_F1 = 0.7          # mean F1 must clear this
 
 def score(expected: set[str], found: set[str]) -> dict:
+    if not expected:
+        return {"precision": 1.0 if not found else 0.0,
+            "recall": 1.0, "f1": 1.0 if not found else 0.0,
+            "tp": 0, "fp": len(found), "fn": 0}
     tp = len(expected & found)
     fp = len(found - expected)
     fn = len(expected - found)
@@ -34,9 +39,16 @@ def run_llm_eval():
             lang = case.get("lang", "apex")
             if lang == "apex":
                 result = apex_review_fn(case["code"], case["id"])
+                found = {f.rule.value for f in result.findings}
+            elif lang == "cross":
+                pair = CrossPair(lwc_file=case["id"], lwc_js=case["js"],apex_file=case["id"], apex_code=case["apex_code"])
+                findings = cross_reason([pair])          # what goes in the list?
+                found = {f.rule.value for f in findings}
+                result = None 
             else:
                 result = lwc_review_fn(case.get("js", ""), case.get("html", ""), case["id"])
-            found = {f.rule.value for f in result.findings}
+                found = {f.rule.value for f in result.findings}
+                
             s = score(expected, found)
             f1_scores.append(s["f1"])
 
