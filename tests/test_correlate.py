@@ -1,4 +1,7 @@
+from pathlib import Path
 from src.orchestrator.correlate import correlate
+from src.orchestrator.run import resolve_controller_findings
+from src.orchestrator.route import LwcBundle
 from src.review_core.models import ReviewResult, Finding, Severity
 
 
@@ -50,3 +53,50 @@ def test_lwc_calling_unreviewed_controller_no_flag():
     findings = correlate(results, lwc_sources)
 
     assert findings == []
+
+
+# ── resolve_controller_findings: pull in unchanged controllers, regex-only ──
+
+INSECURE_CONTROLLER = """\
+public class AccountController {
+    @AuraEnabled(cacheable=true)
+    public static List<Account> getAccounts() {
+        return [SELECT Id, Name FROM Account];
+    }
+}"""
+
+
+def test_resolves_unchanged_controller_from_repo(tmp_path):
+    # An LWC imports AccountController, but the .cls is NOT in the reviewed set.
+    classes = tmp_path / "classes"
+    classes.mkdir()
+    (classes / "AccountController.cls").write_text(INSECURE_CONTROLLER)
+
+    bundle_dir = tmp_path / "lwc" / "accountList"
+    bundle_dir.mkdir(parents=True)
+    js = bundle_dir / "accountList.js"
+    js.write_text(LWC_CALLING_ACCOUNTCONTROLLER)
+    bundle = LwcBundle(js=js, html=None)
+
+    extra = resolve_controller_findings([bundle], existing_results=[], repo_root=tmp_path)
+
+    assert len(extra) == 1
+    assert Path(extra[0].filename).stem == "AccountController"
+    rules = {f.rule.value for f in extra[0].findings}
+    assert "missing_crud_fls" in rules   # regex found the security gap, free
+
+
+def test_skips_controller_already_reviewed(tmp_path):
+    classes = tmp_path / "classes"
+    classes.mkdir()
+    (classes / "AccountController.cls").write_text(INSECURE_CONTROLLER)
+    bundle_dir = tmp_path / "lwc" / "accountList"
+    bundle_dir.mkdir(parents=True)
+    js = bundle_dir / "accountList.js"
+    js.write_text(LWC_CALLING_ACCOUNTCONTROLLER)
+    bundle = LwcBundle(js=js, html=None)
+
+    already = [ReviewResult(filename="AccountController.cls", findings=[])]
+    extra = resolve_controller_findings([bundle], existing_results=already, repo_root=tmp_path)
+
+    assert extra == []   # already in the reviewed set → don't re-scan

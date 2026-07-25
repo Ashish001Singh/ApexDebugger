@@ -2,12 +2,8 @@ import sys
 import json
 import click
 from pathlib import Path
-from src.orchestrator.route import route
-from src.orchestrator.synthesize import synthesize
-from src.apex_copilot.review import review as apex_review_fn
-from src.lwc_copilot.review import review as lwc_review_fn
-from src.orchestrator.correlate import correlate
-from src.review_core.models import Severity, ReviewResult
+from src.orchestrator.run import review_paths
+from src.review_core.models import Severity
 
 
 @click.group()
@@ -22,26 +18,7 @@ def cli() -> None:
 def apex_review(files: tuple[str, ...], json_output: bool, min_severity: str) -> None:
     """Review one or more Apex .cls/.trigger or LWC .js FILES for issues."""
     paths = [Path(f) for f in files]
-    routed = route(paths)
-    
-    for skipped in routed.skipped:
-        click.secho(f"Skipping {skipped} — unrecognized extension.", fg="yellow")
-
-    results = []
-    for apex_path in routed.apex_files:
-        results.append(apex_review_fn(apex_path.read_text(), filename=str(apex_path)))
-    for bundle in routed.lwc_bundles:
-        js = bundle.js.read_text()
-        html = bundle.html.read_text() if bundle.html else ""
-        results.append(lwc_review_fn(js, html, filename=str(bundle.js)))
-
-    # cross-language: derive findings from the seam between LWC and Apex
-    lwc_sources = {str(b.js): b.js.read_text() for b in routed.lwc_bundles}
-    cross = correlate(results, lwc_sources)
-    if cross:
-        results.append(ReviewResult(filename="(cross-language)", findings=cross))
-
-    results = synthesize(results)
+    results = review_paths(paths)
 
     severity_order = {Severity.LOW: 0, Severity.MEDIUM: 1, Severity.HIGH: 2, Severity.INFO: -1}
     min_level = severity_order.get(Severity(min_severity), 0)

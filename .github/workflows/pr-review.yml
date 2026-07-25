@@ -8,6 +8,8 @@ on:
     paths:
       - "**.cls"
       - "**.trigger"
+      - "**.js"
+      - "**.html"
 
 permissions:
   contents: read
@@ -28,10 +30,10 @@ jobs:
       - run: uv python install 3.12
       - run: uv sync
 
-      - name: Collect changed Apex files
+      - name: Collect changed reviewable files
         id: changed
         run: |
-          FILES=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" -- '*.cls' '*.trigger' | tr '\n' ' ')
+          FILES=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" -- '*.cls' '*.trigger' '*.js' '*.html' | tr '\n' ' ')
           echo "files=$FILES" >> "$GITHUB_OUTPUT"
 
       - name: Run ApexDebugger review
