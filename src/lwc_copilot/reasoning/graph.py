@@ -42,13 +42,16 @@ from src.review_core.voting import vote_findings
 
 # Rules the deterministic layer owns — regex is authoritative. The LLM's job is
 # only the reasoning rules regex CAN'T do; drop its claims on regex-owned rules.
-# imperative_apex_no_error_handling was dropped from the regex layer: judging
-# whether a promise chain handles its errors needs balanced-delimiter parsing
-# (beyond regex) and the fixed-window heuristic produced ~all false positives
-# on real code. It's now LLM-owned — the LLM can reason about the whole chain.
+# Two rules were retired from the regex layer to the LLM after ASCENT spot-checks
+# showed high false-positive rates driven by judgment the regex couldn't make:
+#   - imperative_apex_no_error_handling: promise-chain error handling needs
+#     balanced-delimiter parsing (beyond regex).
+#   - missing_wire_error_handler: distinguishing data wires that need a handler
+#     from error-less context adapters is an open-ended allowlist problem.
+# Both are LLM-owned now. The regex layer keeps only syntactically-certain rules.
 REGEX_OWNED = {
     RuleId.unsafe_inner_html, RuleId.manual_dom_manipulation,
-    RuleId.missing_wire_error_handler, RuleId.apex_call_in_loop,
+    RuleId.apex_call_in_loop,
 }
 
 client = OpenAI(api_key=settings.openai_api_key)

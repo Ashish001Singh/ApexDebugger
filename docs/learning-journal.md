@@ -343,4 +343,21 @@ adjacent call), not incidental.
 retiring — a rule. Structural false positives (a whole class of correct code) justify removal;
 incidental ones justify tuning.
 
+---
+
+## 16. Whack-a-mole is a layer signal
+
+**Q: The wire rule's false positives dropped 242→105 with an adapter allowlist, then the remaining hits revealed *two more* error-less adapters to exempt. Why stop patching and retire the rule instead?**
+Why: Each fix surfaced the next tier of exemptions (`CurrentPageReference` → then `IsConsoleNavigation`,
+`EnclosingTabId` → then what next?). An allowlist that never converges means the rule is encoding a
+judgment ("does this wire adapter have a meaningful error path?") that isn't syntactic — it depends on
+knowing each adapter's semantics, which is exactly what a regex can't know and an LLM can. Same shape as
+the imperative rule: the moment the fix is "add more special cases forever," you're in the wrong layer.
+Retiring it left the regex layer with only the 3 rules that ARE syntactically certain
+(`unsafe_inner_html`, `manual_dom_manipulation`, `apex_call_in_loop`) — the exact split predicted when
+these rules were first built ("three solid, two shaky as regex").
+**Principle:** Whack-a-mole — every fix spawning the next special case — is diagnostic, not just annoying.
+It means the rule needs knowledge the layer doesn't have. Stop patching; move it to the layer that can
+reason. Converging exemptions justify an allowlist; diverging ones justify relocation.
+
 <!-- Append new entries below as we go. Keep it concept + why, skip transient debugging. -->
