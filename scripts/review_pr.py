@@ -1,24 +1,28 @@
 """
-Review the given Apex files and print a Markdown report for a PR comment.
+Review the given changed files and print a Markdown report for a PR comment.
 
-Usage: python scripts/review_pr.py File1.cls File2.cls
-Called by .github/workflows/pr-review.yml on changed .cls/.trigger files.
+Usage: python scripts/review_pr.py File1.cls Component.js ...
+Called by .github/workflows/pr-review.yml on changed .cls/.trigger/.js/.html files.
+
+Routes through the full orchestrator, so the report covers Apex, LWC, AND the
+cross-language security seam. Controllers referenced by a changed LWC but not
+themselves changed are regex-scanned from the repo (free) so cross-language
+findings still surface.
 """
 import sys
-from src.apex_copilot.review import review
+from pathlib import Path
+
+from src.orchestrator.run import review_paths
+from src.review_core.models import ReviewResult
 
 _SEV_ICON = {"high": "🔴", "medium": "🟡", "low": "🔵", "info": "⚪"}
 
 
-def format_file(path: str) -> str:
-    with open(path) as f:
-        code = f.read()
-    result = review(code, filename=path)
-
+def format_result(result: ReviewResult) -> str:
     if not result.findings:
-        return f"### `{path}`\n\n✅ No issues found."
+        return f"### `{result.filename}`\n\n✅ No issues found."
 
-    lines = [f"### `{path}`", ""]
+    lines = [f"### `{result.filename}`", ""]
     for fnd in result.findings:
         icon = _SEV_ICON.get(fnd.severity.value, "•")
         lines.append(f"- {icon} **{fnd.severity.value.upper()}** · line {fnd.line} · `{fnd.rule.value}`")
@@ -33,9 +37,17 @@ def format_file(path: str) -> str:
 def main() -> None:
     files = sys.argv[1:]
     if not files:
-        print("_ApexDebugger: no Apex files changed._")
+        print("_ApexDebugger: no reviewable files changed._")
         return
-    blocks = [format_file(p) for p in files]
+
+    results = review_paths([Path(f) for f in files], resolve_controllers_from=Path.cwd())
+    with_findings = [r for r in results if r.findings]
+
+    if not with_findings:
+        print("## 🔎 ApexDebugger review\n\n✅ No issues found in the changed files.")
+        return
+
+    blocks = [format_result(r) for r in with_findings]
     print("## 🔎 ApexDebugger review\n\n" + "\n\n---\n\n".join(blocks))
 
 

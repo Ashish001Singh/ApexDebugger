@@ -385,4 +385,21 @@ LLM; it was noticing the *relationship* is a first-class thing to check.
 **Principle:** "Cross-language" doesn't automatically mean "needs the LLM." Check whether the correlation
 is objective first — the cheapest layer that can answer correctly wins, same as everywhere.
 
+---
+
+## 18. Sounds-hard vs is-hard: the real regex-or-LLM test
+
+**Q: The cross-language security check spans two files and sounds fancier than the wire rule — yet it stayed pure code while the wire rule was retired to the LLM. What actually decides it?**
+Why: Not "cross-file", not "complex-sounding". The real axis is **bounded-and-decidable vs
+unbounded-judgment**. The security check asks "is the called controller in the set of controllers
+that have a security finding?" — a set-membership test, one right answer, no growing list of
+exceptions. The wire/imperative rules asked "is this adequately handled?" — unbounded: every promise
+shape, every error-less adapter is a new special case, so fixes multiply forever (whack-a-mole /
+non-convergence). A question that *sounds* hard can be a lookup; a question that *sounds* simple can
+hide infinite situations.
+**Principle:** Decide the layer by the SHAPE of the question, not its surface complexity. Would two
+experts always agree on the answer from fixed inputs? → bounded → code. Does it need reading and
+judgment over open-ended situations? → unbounded → LLM. "Cross-file" and "sounds advanced" are
+distractions; bounded-vs-unbounded is the cut.
+
 <!-- Append new entries below as we go. Keep it concept + why, skip transient debugging. -->
