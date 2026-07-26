@@ -78,9 +78,6 @@ def run_reasoning_graph(code: str, findings: list[Finding], filename: str) -> Re
     }
     final_state = graph.invoke(initial_state)
 
-    print('summary: '+final_state["summary"])
-    print('llm_explanation: '+final_state["llm_explanation"])
-
     return ReviewResult(
         filename=filename,
         findings=final_state["findings"],

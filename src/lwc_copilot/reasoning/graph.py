@@ -90,9 +90,6 @@ def run_reasoning_graph(js_code: str, html_code:str, findings: list[Finding], fi
     }
     final_state = graph.invoke(initial_state)
 
-    print('summary: '+final_state["summary"])
-    print('llm_explanation: '+final_state["llm_explanation"])
-
     return ReviewResult(
         filename=filename,
         findings=final_state["findings"],

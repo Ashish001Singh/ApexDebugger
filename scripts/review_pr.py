@@ -44,7 +44,7 @@ def main() -> None:
         return
 
     results = review_paths([Path(f) for f in files], resolve_controllers_from=Path.cwd())
-    with_findings = [r for r in results if r.findings]
+    with_findings = [r for r in results if r.findings or r.summary]
 
     if not with_findings:
         print("## 🔎 ApexDebugger review\n\n✅ No issues found in the changed files.")
