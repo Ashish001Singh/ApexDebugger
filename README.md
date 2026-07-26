@@ -79,6 +79,15 @@ routes each file to its reviewer (Apex / LWC), then runs two cross-file passes:
 
 The layer split follows one rule: **bounded-and-decidable → code; unbounded-judgment → LLM.**
 
+## What it costs
+
+**~$0.0035 per pull request** (measured, not estimated). A 2-file PR runs 10 LLM
+calls — Apex graph (3× vote) + LWC graph (3×) + cross-language reasoning (3×) +
+one rollup summary — ≈16.8K tokens on `gpt-4o-mini` ($0.15 / $0.60 per 1M in/out).
+Scales roughly linearly per changed file (~3 calls each). The deterministic regex
+layer and the CI gate are free; only the LLM layer costs anything — cheap enough to
+run on every push.
+
 ## What it catches
 
 Governor limits (SOQL/DML in loops), hardcoded record & external IDs, missing CRUD/FLS
